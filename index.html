@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SĪT — From Seed to Art</title>
+    <meta name="description" content="Practice latte art with real fluid simulation. Master coffee knowledge from farm to cup. Built for baristas.">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="#" class="logo">SĪT</a>
+        <div class="nav-links">
+            <a class="nav-link" href="#studio">Studio</a>
+            <a class="nav-link" href="#academy">Academy</a>
+            <a class="nav-link" href="#beyond">Beyond the Cup</a>
+            <a class="nav-link" href="#pricing">Pricing</a>
+            <button class="btn btn-outline" onclick="SIT.openDashboard()">Log In</button>
+            <button class="btn btn-primary" onclick="SIT.startTrial()">Start Free Trial</button>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero" id="home">
+        <div class="hero-text">
+            <h1>The craft of coffee,<br>from <em>seed</em> to <em>art</em>.</h1>
+            <p>Practice latte art with fluid simulation. Learn everything coffee. Build your career. All in one place.</p>
+            <button class="btn btn-primary btn-large" onclick="SIT.startTrial()">Start Pouring — 7 Days Free</button>
+            <p style="margin-top:0.5rem;font-size:0.85rem;color:var(--text-muted);">Then $14.99/month. Cancel anytime.</p>
+        </div>
+        <div class="hero-visual">♡</div>
+    </section>
+
+    <!-- Studio -->
+    <section class="studio-section" id="studio">
+        <div class="section-header">
+            <h2>The Studio</h2>
+            <p>Pour milk that flows and stays. Create latte art with realistic fluid dynamics.</p>
+        </div>
+        <div class="studio-grid">
+            <div class="canvas-card">
+                <div class="canvas-header">
+                    <div class="mode-tabs">
+                        <button class="mode-tab active" onclick="switchAppMode('guided')">Guided</button>
+                        <button class="mode-tab" onclick="switchAppMode('freestyle')">Freestyle</button>
+                    </div>
+                    <div class="canvas-info">
+                        <span id="patternName">Heart</span>
+                        <span class="difficulty" id="difficultyDisplay">●●○○○</span>
+                    </div>
+                </div>
+                <div class="cup-wrapper" id="cupWrapper">
+                    <canvas id="fluidCanvas" width="420" height="420"></canvas>
+                    <div class="pour-hint" id="pourHint">Click and drag to pour milk</div>
+                </div>
+                <div class="controls">
+                    <button class="btn" onclick="FluidEngine.undo()">↩ Undo</button>
+                    <button class="btn" onclick="FluidEngine.reset()">Clear</button>
+                    <button class="btn btn-primary" onclick="SIT.scorePour()">⭐ Score Pour</button>
+                    <button class="btn" onclick="SIT.savePour()">💾 Save</button>
+                    <button class="btn" onclick="SIT.downloadArt()">📥 Download</button>
+                    <button class="btn" id="designerBtn" style="display:none;" onclick="openDesigner()">🎨 New Pattern</button>
+                </div>
+                <div class="settings-row">
+                    <div class="setting">
+                        <label>🖌 Brush:</label>
+                        <input type="range" id="brushSlider" min="3" max="30" value="14" oninput="updateBrush(this.value)">
+                        <span class="val" id="brushVal">14</span>
+                    </div>
+                    <div class="setting">
+                        <label>💧 Flow:</label>
+                        <input type="range" id="flowSlider" min="1" max="10" value="5" oninput="updateFlow(this.value)">
+                        <span class="val" id="flowVal">5</span>
+                    </div>
+                    <button class="btn btn-sm" onclick="setBrushPreset('fine')">Fine</button>
+                    <button class="btn btn-sm" onclick="setBrushPreset('medium')">Med</button>
+                    <button class="btn btn-sm" onclick="setBrushPreset('thick')">Thick</button>
+                </div>
+                <div class="tilt-row">
+                    <span>Cup Tilt:</span>
+                    <button class="tilt-btn active" onclick="tiltCup('none')">⟳ Level</button>
+                    <button class="tilt-btn" onclick="tiltCup('left')">↺ Left</button>
+                    <button class="tilt-btn" onclick="tiltCup('right')">↻ Right</button>
+                </div>
+            </div>
+            <div class="pattern-sidebar">
+                <h3>Pattern Library</h3>
+                <input type="text" class="pattern-search" placeholder="🔍 Search patterns..." oninput="populatePatternUI()" id="patternSearch">
+                <div class="pattern-cats">
+                    <button class="cat-btn active" onclick="filterPatternUI('all')">All</button>
+                    <button class="cat-btn" onclick="filterPatternUI('heart')">♡ Hearts</button>
+                    <button class="cat-btn" onclick="filterPatternUI('tulip')">🌷 Tulips</button>
+                    <button class="cat-btn" onclick="filterPatternUI('rosetta')">🍂 Rosettas</button>
+                    <button class="cat-btn" onclick="filterPatternUI('swan')">🦢 Swans</button>
+                    <button class="cat-btn" onclick="filterPatternUI('custom')">🎨 My Designs</button>
+                </div>
+                <div class="pattern-grid" id="patternGrid"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Academy -->
+    <section class="academy-section" id="academy">
+        <div class="section-header">
+            <h2>The Academy</h2>
+            <p>7 chapters. From farm to cup. Every detail, deeply explored.</p>
+        </div>
+        <div class="card-grid" id="academyGrid"></div>
+    </section>
+
+    <!-- Beyond the Cup -->
+    <section class="beyond-section" id="beyond">
+        <div class="section-header">
+            <h2>Beyond the Cup</h2>
+            <p>Coffee is food. Coffee is garden. Coffee is everything.</p>
+        </div>
+        <div class="card-grid" id="beyondGrid"></div>
+    </section>
+
+    <!-- Pricing -->
+    <section class="pricing-section" id="pricing">
+        <div class="section-header">
+            <h2>Simple Pricing</h2>
+            <p>Start free. Upgrade when you're ready.</p>
+        </div>
+        <div class="pricing-grid">
+            <div class="price-card">
+                <h3>Free Trial</h3>
+                <div class="price-num">$0</div>
+                <div class="price-period">7 days</div>
+                <ul class="feature-list">
+                    <li>Fluid simulation with brush & flow</li>
+                    <li>12 guided patterns + cup tilt</li>
+                    <li>Academy Chapter 1: The Seed</li>
+                    <li>Culinary recipes (12 dishes)</li>
+                    <li>3 freestyle pours per day</li>
+                    <li>Watermarked exports</li>
+                </ul>
+                <button class="btn btn-outline btn-full" onclick="SIT.startTrial()">Start Trial</button>
+            </div>
+            <div class="price-card featured">
+                <div class="price-badge">Most Popular</div>
+                <h3>SĪT Pro</h3>
+                <div class="price-num">$14.99</div>
+                <div class="price-period">/month</div>
+                <ul class="feature-list">
+                    <li>Unlimited pours — no limits</li>
+                    <li>Full 50+ pattern library</li>
+                    <li>All 7 Academy chapters</li>
+                    <li>All Beyond the Cup content</li>
+                    <li>Full score breakdown</li>
+                    <li>Portfolio & progress tracking</li>
+                    <li>Watermark-free exports</li>
+                    <li>Custom pattern designer</li>
+                    <li>Priority support via WhatsApp</li>
+                </ul>
+                <button class="btn btn-primary btn-full" onclick="SIT.showUpgrade()">Get Pro</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Score Overlay -->
+    <div class="score-overlay" id="scoreOverlay">
+        <div class="score-card">
+            <h2>Pour Complete</h2>
+            <div class="score-emoji" id="scoreEmoji">☕</div>
+            <div class="score-big" id="scoreNumber">--</div>
+            <div class="score-detail" id="scoreDetail"></div>
+            <div class="score-tip" id="scoreTip"></div>
+            <div style="display:flex;gap:8px;justify-content:center;">
+                <button class="btn btn-primary" onclick="SIT.closeScore()">Close</button>
+                <button class="btn" onclick="SIT.closeScore();FluidEngine.reset();">Try Again</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Screen -->
+    <div class="overlay" id="loginScreen">
+        <div class="login-center">
+            <div class="login-box">
+                <div style="font-family:Georgia,serif;font-size:2rem;color:var(--espresso);margin-bottom:1rem;">SĪT</div>
+                <h3 style="margin-bottom:0.5rem;">Welcome Back</h3>
+                <p style="color:var(--text-light);margin-bottom:1.5rem;">Log in to access your studio.</p>
+                <input type="text" id="loginUsername" placeholder="Username">
+                <input type="password" id="loginPassword" placeholder="Password (any password works)">
+                <button class="btn btn-primary btn-full" onclick="SIT.doLogin()">Log In</button>
+                <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;">No account? <a href="#" onclick="SIT.startTrial()" style="color:var(--accent);">Start free trial</a></p>
+                <p id="loginError" style="color:var(--error);font-size:0.8rem;margin-top:0.5rem;display:none;"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="overlay" id="dashboard">
+        <div class="dash-container">
+            <div class="dash-sidebar">
+                <div class="user-profile">
+                    <div class="user-avatar" id="userAvatar">E</div>
+                    <h4 id="userName">@barista</h4>
+                </div>
+                <nav class="dash-nav">
+                    <a class="dash-nav-item active" onclick="SIT.showDashTab('overview')">Overview</a>
+                    <a class="dash-nav-item" onclick="SIT.showDashTab('pours')">My Pours</a>
+                    <a class="dash-nav-item" onclick="SIT.showDashTab('academy')">Academy Progress</a>
+                    <a class="dash-nav-item" onclick="SIT.showDashTab('settings')">Settings</a>
+                </nav>
+                <button class="btn btn-outline btn-full" onclick="SIT.closeDashboard()">← Back to SĪT</button>
+                <button class="btn btn-outline btn-full btn-danger" onclick="SIT.doLogout()">Log Out</button>
+            </div>
+            <div class="dash-content" id="dashContent"></div>
+        </div>
+    </div>
+
+    <!-- Chapter/Beyond Modal -->
+    <div class="modal" id="chapterModal">
+        <div class="modal-box">
+            <button class="modal-close" onclick="Academy.closeChapter()">✕</button>
+            <div class="content" id="chapterContent"></div>
+        </div>
+    </div>
+
+    <!-- Upgrade Modal -->
+    <div class="modal" id="upgradeModal">
+        <div class="modal-box narrow" id="upgradeContent"></div>
+    </div>
+
+    <!-- Designer Modal -->
+    <div class="modal" id="designerModal">
+        <div class="modal-box narrow" id="designerContent"></div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div>
+            <a onclick="SIT.showPage('about')">About</a>
+            <a onclick="SIT.showPage('contact')">Contact</a>
+            <a onclick="SIT.showPage('privacy')">Privacy</a>
+            <a onclick="SIT.showPage('terms')">Terms</a>
+        </div>
+        <div class="footer-bottom">© 2026 SĪT. Built for baristas, by baristas. WhatsApp: +256 704 864021</div>
+    </footer>
+
+    <!-- JavaScript Files -->
+    <script src="js/fluid.js"></script>
+    <script src="js/patterns.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/academy.js"></script>
+    <script src="js/beyond.js"></script>
+
+    <script>
+        // ==========================================
+        // Initialize everything when page loads
+        // ==========================================
+
+        // Init Fluid Engine
+        var canvas = document.getElementById('fluidCanvas');
+        FluidEngine.init(canvas, { brushSize: 14, flowRate: 5 });
+
+        // Canvas input handlers
+        var lastX = 0, lastY = 0;
+
+        canvas.addEventListener('mousedown', function(e) {
+            var r = canvas.getBoundingClientRect();
+            lastX = (e.clientX - r.left) * (420 / r.width);
+            lastY = (e.clientY - r.top) * (420 / r.height);
+            FluidEngine.startStroke();
+            FluidEngine.continueStroke(lastX, lastY);
+            document.getElementById('pourHint').style.display = 'none';
+        });
+
+        canvas.addEventListener('mousemove', function(e) {
+            if (e.buttons !== 1) return;
+            var r = canvas.getBoundingClientRect();
+            var x = (e.clientX - r.left) * (420 / r.width);
+            var y = (e.clientY - r.top) * (420 / r.height);
+            FluidEngine.continueStroke(x, y);
+            lastX = x; lastY = y;
+        });
+
+        canvas.addEventListener('mouseup', function() { FluidEngine.endStroke(); });
+        canvas.addEventListener('mouseleave', function() { FluidEngine.endStroke(); });
+
+        canvas.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            var r = canvas.getBoundingClientRect();
+            lastX = (e.touches[0].clientX - r.left) * (420 / r.width);
+            lastY = (e.touches[0].clientY - r.top) * (420 / r.height);
+            FluidEngine.startStroke();
+            FluidEngine.continueStroke(lastX, lastY);
+            document.getElementById('pourHint').style.display = 'none';
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+            var r = canvas.getBoundingClientRect();
+            var x = (e.touches[0].clientX - r.left) * (420 / r.width);
+            var y = (e.touches[0].clientY - r.top) * (420 / r.height);
+            FluidEngine.continueStroke(x, y);
+            lastX = x; lastY = y;
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', function() { FluidEngine.endStroke(); });
+
+        // Mode switching
+        function switchAppMode(mode) {
+            document.querySelectorAll('.mode-tab').forEach(function(t) {
+                t.classList.toggle('active', t.textContent.toLowerCase().indexOf(mode) !== -1);
+            });
+        }
+
+        // Brush & Flow
+        function updateBrush(val) {
+            FluidEngine.setBrushSize(parseInt(val));
+            document.getElementById('brushVal').textContent = val;
+        }
+
+        function updateFlow(val) {
+            FluidEngine.setFlowRate(parseInt(val));
+            document.getElementById('flowVal').textContent = val;
+        }
+
+        function setBrushPreset(preset) {
+            var b, f;
+            if (preset === 'fine') { b = 5; f = 2; }
+            else if (preset === 'medium') { b = 14; f = 5; }
+            else { b = 25; f = 8; }
+            document.getElementById('brushSlider').value = b;
+            document.getElementById('brushVal').textContent = b;
+            document.getElementById('flowSlider').value = f;
+            document.getElementById('flowVal').textContent = f;
+            FluidEngine.setBrushSize(b);
+            FluidEngine.setFlowRate(f);
+        }
+
+        // Tilt
+        function tiltCup(dir) {
+            var wrapper = document.getElementById('cupWrapper');
+            wrapper.classList.remove('tilt-left', 'tilt-right');
+            if (dir === 'left') { wrapper.classList.add('tilt-left'); }
+            else if (dir === 'right') { wrapper.classList.add('tilt-right'); }
+            FluidEngine.setTilt(dir);
+            document.querySelectorAll('.tilt-btn').forEach(function(b) {
+                b.classList.remove('active');
+                if ((b.textContent.indexOf('Level') !== -1 && dir === 'none') ||
+                    (b.textContent.indexOf('Left') !== -1 && dir === 'left') ||
+                    (b.textContent.indexOf('Right') !== -1 && dir === 'right')) {
+                    b.classList.add('active');
+                }
+            });
+        }
+
+        // Pattern UI
+        function populatePatternUI() {
+            var search = document.getElementById('patternSearch').value;
+            var filter = PatternLibrary.getCurrentFilter();
+            var patterns = PatternLibrary.getFilteredPatterns(filter, search);
+            var current = PatternLibrary.getCurrentPattern();
+            document.getElementById('patternGrid').innerHTML = patterns.map(function(p) {
+                return '<div class="pattern-card' + (current === p.id ? ' selected' : '') + '" onclick="selectPatternUI(\'' + p.id + '\',\'' + p.name + '\',' + p.diff + ')"><div class="p-icon">' + p.icon + '</div><div class="p-name">' + p.name + '</div><div class="p-diff">' + '●'.repeat(p.diff) + '○'.repeat(5 - p.diff) + '</div></div>';
+            }).join('');
+        }
+
+        function selectPatternUI(id, name, diff) {
+            PatternLibrary.setCurrentPattern(id);
+            document.getElementById('patternName').textContent = name;
+            document.getElementById('difficultyDisplay').textContent = '●'.repeat(diff) + '○'.repeat(5 - diff);
+            populatePatternUI();
+        }
+
+        function filterPatternUI(cat) {
+            PatternLibrary.setCurrentFilter(cat);
+            document.querySelectorAll('.cat-btn').forEach(function(b, i) {
+                b.classList.toggle('active', b.textContent.toLowerCase().indexOf(cat) !== -1 || (cat === 'all' && i === 0));
+            });
+            populatePatternUI();
+        }
+
+        // Designer
+        function openDesigner() {
+            if (!SIT.hasAccess()) { SIT.showUpgrade(); return; }
+            document.getElementById('designerContent').innerHTML =
+                '<button class="modal-close" onclick="closeDesigner()">✕</button>' +
+                '<h2>Custom Pattern Designer</h2>' +
+                '<p style="color:var(--text-light);margin-bottom:1.5rem;">Create your own latte art pattern.</p>' +
+                '<div class="designer-field"><label>Pattern Name</label><input type="text" id="designName" placeholder="e.g. My Dragon"></div>' +
+                '<div class="designer-field"><label>Icon (Emoji)</label><input type="text" id="designIcon" placeholder="e.g. 🐉" maxlength="2"></div>' +
+                '<p style="color:var(--text-muted);font-size:0.8rem;margin-bottom:1rem;">Draw your pattern on the canvas first, then save it here.</p>' +
+                '<button class="btn btn-primary btn-full" onclick="saveCustomDesign()">Save Pattern</button>';
+            document.getElementById('designerModal').classList.add('active');
+        }
+
+        function closeDesigner() { document.getElementById('designerModal').classList.remove('active'); }
+
+        function saveCustomDesign() {
+            var name = document.getElementById('designName').value.trim();
+            var icon = document.getElementById('designIcon').value.trim();
+            if (!name) { SIT.showToast('Enter a pattern name'); return; }
+            PatternLibrary.saveCustomPattern(name, icon || '🎨');
+            closeDesigner();
+            populatePatternUI();
+            SIT.showToast('Pattern saved! Find it under My Designs.');
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'z') { e.preventDefault();
+                FluidEngine.undo(); }
+            if (e.ctrlKey && e.key === 'c') { e.preventDefault();
+                FluidEngine.reset(); return; }
+            if (e.key === 'ArrowLeft') { e.preventDefault();
+                tiltCup('left'); }
+            if (e.key === 'ArrowRight') { e.preventDefault();
+                tiltCup('right'); }
+            if (e.key === 'ArrowDown') { e.preventDefault();
+                tiltCup('none'); }
+            if (e.key === '1') { setBrushPreset('fine'); }
+            if (e.key === '2') { setBrushPreset('medium'); }
+            if (e.key === '3') { setBrushPreset('thick'); }
+        });
+
+        // Initialize UI
+        populatePatternUI();
+        Academy.populateAcademy();
+        Beyond.populateBeyond();
+        SIT.updateProUI();
+
+        console.log('☕ SĪT ready! From seed to art.');
+        console.log('🖌 Click and drag on the cup to pour milk.');
+        console.log('⌨ Shortcuts: 1/2/3 = Brush | Arrow Keys = Tilt | Ctrl+Z = Undo');
+    </script>
+</body>
+</html>
