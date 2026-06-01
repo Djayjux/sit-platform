@@ -95,28 +95,33 @@
                 </div>
             </aside>
 
-            <!-- CANVAS AREA -->
+                    <!-- CANVAS AREA -->
             <main class="canvas-area pouring" id="canvasArea">
                 <div class="cup-wrapper" id="cupWrapper">
+                    <!-- Saucer -->
                     <div class="cup-saucer"></div>
+
+                    <!-- Cup body (decorative ring around circular canvas) -->
                     <div class="cup-body" id="cupBody">
-                        <div class="cup-rim"></div>
                         <div class="canvas-stack" id="canvasStack">
                             <canvas class="canvas-layer" id="espressoCanvas"></canvas>
                             <canvas class="canvas-layer" id="milkCanvas"></canvas>
                             <canvas class="canvas-layer" id="guideCanvas"></canvas>
                             <canvas class="canvas-layer" id="outputCanvas" style="opacity:0;pointer-events:none;"></canvas>
                         </div>
-                        <div class="cup-handle"></div>
                     </div>
+                    
+                    <!-- Handle -->
+                    <div class="cup-handle"></div>
                 </div>
+
                 <div class="pour-hint" id="pourHint">Pour to begin</div>
                 <div class="score-badge" id="scoreBadge">
                     <div class="score-value" id="scoreValue">—</div>
                     <div class="score-label">Pour Score</div>
                 </div>
-            </main>
-
+            </main>  
+            
             <!-- RIGHT PANEL -->
             <aside class="panel-right">
                 <div class="control-group">
