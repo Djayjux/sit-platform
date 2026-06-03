@@ -9,7 +9,7 @@ var SIT = (function() {
         phoneName: 'SIT Support',
         priceUSD: '$14.99',
         priceUGX: '55,000 UGX',
-        googleScriptURL: '' // Add your Google Apps Script URL here later
+        googleScriptURL: 'https://script.google.com/macros/s/AKfycbz0vEOn7BWqbrDaF444hnCWq2HfTFe3Mw_u77QjpLAd3DHIJ9Q2cprtoFB0DtSvyCet/exec'
     };
 
     // State
