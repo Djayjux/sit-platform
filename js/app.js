@@ -1,12 +1,13 @@
 // ==========================================
-// SIT - Main Application
+// SĪT — Main Application Logic
+// Google Sheets Pro Code Validation
 // ==========================================
 
 var SIT = (function() {
     var CONFIG = {
         selarLink: 'https://selar.com/1en1216w11',
         phone: '+256 704 864021',
-        phoneName: 'SIT Support',
+        phoneName: 'SĪT Support',
         priceUSD: '$14.99',
         priceUGX: '55,000 UGX',
         googleScriptURL: 'https://script.google.com/macros/s/AKfycbz0vEOn7BWqbrDaF444hnCWq2HfTFe3Mw_u77QjpLAd3DHIJ9Q2cprtoFB0DtSvyCet/exec'
@@ -14,34 +15,40 @@ var SIT = (function() {
 
     // State
     var state = {
-        mode: 'guided',
         trialDays: parseInt(localStorage.getItem('sit_trial') || '7'),
         trialStart: localStorage.getItem('sit_trialStart') || null,
         proActive: localStorage.getItem('sit_pro') === 'true',
         proExpiry: localStorage.getItem('sit_proExpiry') || null,
+        proCode: localStorage.getItem('sit_proCode') || '',
         totalPours: parseInt(localStorage.getItem('sit_pours') || '0'),
         bestScore: parseFloat(localStorage.getItem('sit_bestScore') || '0'),
         savedDesigns: parseInt(localStorage.getItem('sit_saved') || '0'),
         academyProgress: parseInt(localStorage.getItem('sit_academyProgress') || '0'),
         userName: localStorage.getItem('sit_userName') || '',
         loggedIn: localStorage.getItem('sit_loggedIn') === 'true',
-        freestyleToday: parseInt(localStorage.getItem('sit_freestyle_' + new Date().toDateString()) || '0')
     };
 
     // Check expiry
     if (state.proActive && state.proExpiry && Date.now() > parseInt(state.proExpiry)) {
         state.proActive = false;
+        state.proExpiry = null;
+        state.proCode = '';
         localStorage.removeItem('sit_pro');
         localStorage.removeItem('sit_proExpiry');
+        localStorage.removeItem('sit_proCode');
     }
+
     if (state.trialStart) {
         state.trialDays = Math.max(0, 7 - Math.floor((Date.now() - new Date(state.trialStart)) / 86400000));
         localStorage.setItem('sit_trial', state.trialDays);
     }
 
     function hasAccess() { return state.proActive || state.trialDays > 0; }
+
     function getDaysRemaining() {
-        if (state.proActive && state.proExpiry) return Math.max(0, Math.ceil((parseInt(state.proExpiry) - Date.now()) / 86400000));
+        if (state.proActive && state.proExpiry) {
+            return Math.max(0, Math.ceil((parseInt(state.proExpiry) - Date.now()) / 86400000));
+        }
         return state.trialDays;
     }
 
@@ -63,8 +70,8 @@ var SIT = (function() {
             localStorage.setItem('sit_trial', 7);
         }
         showToast('7-day trial active! All features unlocked.');
-        if (typeof populateAcademy === 'function') populateAcademy();
-        if (typeof populateBeyond === 'function') populateBeyond();
+        if (typeof Academy !== 'undefined' && Academy.populateAcademy) Academy.populateAcademy();
+        if (typeof Beyond !== 'undefined' && Beyond.populateBeyond) Beyond.populateBeyond();
         updateProUI();
     }
 
@@ -81,9 +88,9 @@ var SIT = (function() {
         if (db) db.style.display = hasAccess() ? 'inline-block' : 'none';
     }
 
-    // Scoring
+    // ===== SCORING =====
     function scorePour() {
-        var strokes = FluidEngine.getStrokes();
+        var strokes = Studio ? (Studio.getStrokes ? Studio.getStrokes() : []) : [];
         if (strokes.length === 0) { showToast('Pour something first!'); return; }
         if (!hasAccess()) { showUpgrade(); return; }
 
@@ -93,8 +100,7 @@ var SIT = (function() {
         var flo = Math.random() * 3 + 6;
         var ov = parseFloat(((sym + con + def + flo) / 4).toFixed(1));
 
-        if (ov > state.bestScore) { state.bestScore = ov;
-            saveState(); }
+        if (ov > state.bestScore) { state.bestScore = ov; saveState(); }
 
         document.getElementById('scoreNumber').textContent = ov;
         document.getElementById('scoreEmoji').textContent = ov >= 8 ? '🌟' : ov >= 6 ? '👍' : '💪';
@@ -120,7 +126,7 @@ var SIT = (function() {
 
     function closeScore() { document.getElementById('scoreOverlay').classList.remove('active'); }
 
-    // Save / Download
+    // ===== SAVE / DOWNLOAD =====
     function savePour() {
         if (!hasAccess()) { showUpgrade(); return; }
         state.savedDesigns++;
@@ -129,40 +135,39 @@ var SIT = (function() {
     }
 
     function downloadArt() {
-        var url = FluidEngine.getDataURL();
-        var a = document.createElement('a');
-        a.download = 'sit-latte-art-' + Date.now() + '.png';
-        a.href = url;
-        a.click();
-        showToast('Art downloaded!');
+        if (typeof Studio !== 'undefined' && Studio.downloadCanvas) {
+            Studio.downloadCanvas();
+        } else {
+            showToast('Studio not ready. Try again.');
+        }
     }
 
-    // Upgrade
+    // ===== UPGRADE / PRO CODE =====
     function showUpgrade() {
         document.getElementById('upgradeContent').innerHTML =
             '<button class="modal-close" onclick="closeUpgrade()">✕</button>' +
-            '<h2>Unlock SIT Pro</h2>' +
+            '<h2>Unlock SĪT Pro</h2>' +
             '<p style="margin-bottom:1.5rem;color:var(--text-light);">Full Academy. Unlimited pours. All features.</p>' +
             '<div style="background:#F5F0E8;padding:1.5rem;border-radius:12px;margin-bottom:1.5rem;">' +
             '<h3 style="color:var(--espresso);">Pay Online (International)</h3>' +
             '<a href="' + CONFIG.selarLink + '" target="_blank" class="btn btn-primary btn-large" style="display:block;text-align:center;text-decoration:none;">Pay ' + CONFIG.priceUSD + ' on Selar</a>' +
-            '<p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">Card, PayPal, mobile money.</p></div>' +
+            '<p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">Card, PayPal, mobile money accepted.</p></div>' +
             '<div style="background:#FFF3CD;padding:1.5rem;border-radius:12px;margin-bottom:1.5rem;">' +
-            '<h3 style="color:#856404;">Uganda - Mobile Money</h3>' +
+            '<h3 style="color:#856404;">Uganda — Mobile Money</h3>' +
             '<p style="color:#856404;">Send <strong>' + CONFIG.priceUGX + '</strong> to:</p>' +
             '<p style="color:#856404;font-size:1.25rem;font-weight:700;">' + CONFIG.phone + '</p>' +
-            '<p style="color:#856404;">Name: ' + CONFIG.phoneName + '</p></div>' +
+            '<p style="color:#856404;">Name: ' + CONFIG.phoneName + '</p>' +
+            '<p style="color:#856404;font-size:0.85rem;">Include your username. Code sent via WhatsApp within 15 minutes.</p></div>' +
             '<div style="border:1px solid var(--border);padding:1.5rem;border-radius:12px;">' +
-            '<h3 style="color:var(--espresso);">Have a Pro Code?</h3>' +
+            '<h3 style="color:var(--espresso);">Already have a code?</h3>' +
             '<input type="text" id="accessCodeInput" placeholder="SIT-PRO-XXXXX" style="width:100%;padding:0.75rem;border:1px solid var(--border);border-radius:8px;margin:0.75rem 0;text-align:center;font-size:1rem;text-transform:uppercase;">' +
-            '<button class="btn btn-primary btn-full" onclick="redeemProCode()">Activate Pro</button>' +
+            '<button class="btn btn-primary btn-full" onclick="SIT.redeemProCode()">Activate Pro</button>' +
             '<p id="codeError" style="color:var(--error);display:none;margin-top:0.5rem;"></p></div>' +
             '<p style="margin-top:1rem;font-size:0.8rem;color:var(--text-muted);">WhatsApp: <strong>' + CONFIG.phone + '</strong></p>';
         document.getElementById('upgradeModal').classList.add('active');
         setTimeout(function() {
             var inp = document.getElementById('accessCodeInput');
-            if (inp) { inp.focus();
-                inp.addEventListener('keypress', function(e) { if (e.key === 'Enter') redeemProCode(); }); }
+            if (inp) { inp.focus(); inp.addEventListener('keypress', function(e) { if (e.key === 'Enter') redeemProCode(); }); }
         }, 100);
     }
 
@@ -171,28 +176,37 @@ var SIT = (function() {
     function redeemProCode() {
         var code = document.getElementById('accessCodeInput').value.trim().toUpperCase();
         var err = document.getElementById('codeError');
-        if (!code) { err.textContent = 'Enter a code.';err.style.display='block';return; }
+        if (!code) { err.textContent = 'Enter a code.'; err.style.display = 'block'; return; }
 
-        // Try Google Sheets first, fall back to local
-        if (CONFIG.googleScriptURL) {
-            fetch(CONFIG.googleScriptURL + '?action=validate&code=' + encodeURIComponent(code) + '&user=' + encodeURIComponent(state.userName || 'anonymous'))
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (data.valid) { activatePro(code); } else { err.textContent = data.message || 'Invalid code.';err.style.display='block'; }
-                })
-                .catch(function() { activateProLocal(code, err); });
-        } else {
-            activateProLocal(code, err);
-        }
-    }
+        // Show loading
+        err.textContent = 'Validating...';
+        err.style.color = 'var(--text-muted)';
+        err.style.display = 'block';
 
-    function activateProLocal(code, err) {
-        // Simple local check - accepts SIT-PRO- followed by anything
-        if (code.indexOf('SIT-PRO-') === 0 && code.length > 8) {
-            activatePro(code);
-        } else {
-            if (err) { err.textContent = 'Invalid code format. Contact ' + CONFIG.phone;err.style.display='block'; }
-        }
+        // Try Google Sheets validation
+        var url = CONFIG.googleScriptURL + '?action=validate&code=' + encodeURIComponent(code) + '&user=' + encodeURIComponent(state.userName || 'anonymous');
+
+        fetch(url)
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data.valid) {
+                    activatePro(code);
+                } else {
+                    err.textContent = data.message || 'Invalid code.';
+                    err.style.color = 'var(--error)';
+                    err.style.display = 'block';
+                }
+            })
+            .catch(function() {
+                // Google Sheets failed — try local fallback
+                if (code.indexOf('SIT-PRO-') === 0 && code.length > 8) {
+                    activatePro(code);
+                } else {
+                    err.textContent = 'Cannot validate code. Check your connection or contact ' + CONFIG.phone;
+                    err.style.color = 'var(--error)';
+                    err.style.display = 'block';
+                }
+            });
     }
 
     function activatePro(code) {
@@ -205,19 +219,19 @@ var SIT = (function() {
         localStorage.setItem('sit_proExpiry', state.proExpiry);
         localStorage.setItem('sit_proCode', state.proCode);
         closeUpgrade();
-        showToast('Pro activated! 30 days of full access!');
+        showToast('🎉 Pro activated! 30 days of full access!');
         updateProUI();
-        if (typeof populateAcademy === 'function') populateAcademy();
-        if (typeof populateBeyond === 'function') populateBeyond();
+        if (typeof Academy !== 'undefined' && Academy.populateAcademy) Academy.populateAcademy();
+        if (typeof Beyond !== 'undefined' && Beyond.populateBeyond) Beyond.populateBeyond();
     }
 
-    // Login
+    // ===== LOGIN / LOGOUT =====
     function doLogin() {
         var un = document.getElementById('loginUsername').value.trim();
         var pw = document.getElementById('loginPassword').value;
         var er = document.getElementById('loginError');
-        if (!un) { er.textContent = 'Enter a username.';er.style.display='block';return; }
-        if (!pw) { er.textContent = 'Enter a password.';er.style.display='block';return; }
+        if (!un) { er.textContent = 'Enter a username.'; er.style.display = 'block'; return; }
+        if (!pw) { er.textContent = 'Enter a password.'; er.style.display = 'block'; return; }
         state.userName = un;
         state.loggedIn = true;
         saveState();
@@ -237,7 +251,7 @@ var SIT = (function() {
         saveState();
         document.getElementById('dashboard').classList.remove('active');
         document.getElementById('loginScreen').classList.remove('active');
-        showToast('Logged out.');
+        showToast('Logged out. See you soon!');
     }
 
     function openDashboard() {
@@ -267,13 +281,19 @@ var SIT = (function() {
         var bd = document.getElementById('trialBadge');
         if (bd) {
             var d = getDaysRemaining();
-            if (state.proActive) { bd.textContent = 'Pro: ' + d + ' days';
+            if (state.proActive) {
+                bd.textContent = 'Pro: ' + d + ' days';
                 bd.style.background = '#D4EDDA';
-                bd.style.color = '#155724'; } else if (state.trialDays > 0) { bd.textContent = 'Trial: ' + d + ' days';
+                bd.style.color = '#155724';
+            } else if (state.trialDays > 0) {
+                bd.textContent = 'Trial: ' + d + ' days';
                 bd.style.background = 'var(--accent-light)';
-                bd.style.color = 'var(--espresso)'; } else { bd.textContent = 'Free - Upgrade';
+                bd.style.color = 'var(--espresso)';
+            } else {
+                bd.textContent = 'Free — Upgrade';
                 bd.style.background = '#F8D7DA';
-                bd.style.color = '#721C24'; }
+                bd.style.color = '#721C24';
+            }
         }
     }
 
@@ -282,15 +302,17 @@ var SIT = (function() {
         if (event && event.target) event.target.classList.add('active');
         var ct = document.getElementById('dashContent');
         var d = getDaysRemaining();
-        var lb = state.proActive ? 'Pro - ' + d + ' days' : state.trialDays > 0 ? 'Trial - ' + d + ' days' : 'Free Plan';
+        var lb = state.proActive ? 'Pro — ' + d + ' days' : state.trialDays > 0 ? 'Trial — ' + d + ' days' : 'Free Plan';
         if (tb === 'overview') {
             ct.innerHTML =
                 '<div class="dash-header"><h2>Your Studio</h2><span class="trial-badge">' + lb + '</span></div>' +
-                '<div class="dash-stats"><div class="stat-card"><span class="stat-number">' + state.totalPours + '</span><span class="stat-label">Total Pours</span></div><div class="stat-card"><span class="stat-number">' + (state.bestScore ? state.bestScore.toFixed(1) : '--') + '</span><span class="stat-label">Best Score</span></div><div class="stat-card"><span class="stat-number">' + state.savedDesigns + '</span><span class="stat-label">Saved</span></div><div class="stat-card"><span class="stat-number">' + state.academyProgress + '%</span><span class="stat-label">Academy</span></div></div>' +
-                (!state.proActive && state.trialDays <= 0 ? '<div style="text-align:center;margin-top:2rem;padding:2rem;background:#FFF3CD;border-radius:16px;"><h3 style="color:#856404;">Upgrade to Pro</h3><button class="btn btn-primary btn-large" onclick="SIT.showUpgrade()">Get Pro</button></div>' : '');
+                '<div class="dash-stats"><div class="stat-card"><span class="stat-number">' + state.totalPours + '</span><span class="stat-label">Total Pours</span></div><div class="stat-card"><span class="stat-number">' + (state.bestScore ? state.bestScore.toFixed(1) : '--') + '</span><span class="stat-label">Best Score</span></div><div class="stat-card"><span class="stat-number">' + state.savedDesigns + '</span><span class="stat-label">Saved Designs</span></div><div class="stat-card"><span class="stat-number">' + state.academyProgress + '%</span><span class="stat-label">Academy</span></div></div>' +
+                (!state.proActive && state.trialDays <= 0 ? '<div style="text-align:center;margin-top:2rem;padding:2rem;background:#FFF3CD;border-radius:16px;"><h3 style="color:#856404;">✨ Upgrade to Pro</h3><p style="color:#856404;">Unlock everything for ' + CONFIG.priceUSD + '/month</p><button class="btn btn-primary btn-large" onclick="SIT.showUpgrade()">Get Pro</button></div>' : '');
         } else if (tb === 'settings') {
             ct.innerHTML =
-                '<div class="dash-header"><h2>Settings</h2></div><div style="background:#fff;padding:2rem;border-radius:16px;border:1px solid var(--border);"><label style="display:block;margin-bottom:1rem;font-weight:600;">Username</label><input type="text" id="settingsUsername" value="' + state.userName + '" style="width:100%;padding:0.75rem;border:1px solid var(--border);border-radius:8px;margin-bottom:1rem;"><button class="btn btn-primary" onclick="SIT.saveSettings()">Save</button>' + (state.proActive ? '<div style="margin-top:1.5rem;padding:1rem;background:#D4EDDA;border-radius:8px;"><p style="color:#155724;"><strong>Pro Active</strong> - ' + d + ' days</p></div>' : '') + '<button class="btn btn-outline" style="margin-top:1rem;" onclick="SIT.showUpgrade()">Enter Pro Code</button></div>';
+                '<div class="dash-header"><h2>Settings</h2></div><div style="background:#fff;padding:2rem;border-radius:16px;border:1px solid var(--border);"><label style="display:block;margin-bottom:1rem;font-weight:600;">Username</label><input type="text" id="settingsUsername" value="' + state.userName + '" style="width:100%;padding:0.75rem;border:1px solid var(--border);border-radius:8px;margin-bottom:1rem;"><button class="btn btn-primary" onclick="SIT.saveSettings()">Save</button>' +
+                (state.proActive ? '<div style="margin-top:1.5rem;padding:1rem;background:#D4EDDA;border-radius:8px;"><p style="color:#155724;"><strong>Pro Active</strong> — ' + d + ' days remaining</p><p style="color:#155724;font-size:0.85rem;">Code: ' + state.proCode + '</p></div>' : '') +
+                '<button class="btn btn-outline" style="margin-top:1rem;" onclick="SIT.showUpgrade()">Enter Pro Code</button></div>';
         } else {
             ct.innerHTML = '<div class="dash-header"><h2>' + tb.charAt(0).toUpperCase() + tb.slice(1) + '</h2></div><p class="empty-state">Coming soon.</p>';
         }
@@ -298,25 +320,28 @@ var SIT = (function() {
 
     function saveSettings() {
         var n = document.getElementById('settingsUsername').value;
-        if (n) { state.userName = n;
+        if (n) {
+            state.userName = n;
             saveState();
             document.getElementById('userName').textContent = '@' + n;
             document.getElementById('userAvatar').textContent = n.charAt(0).toUpperCase();
-            showToast('Settings saved!'); }
+            showToast('Settings saved!');
+        }
     }
 
-    // Page content
+    // ===== PAGES =====
     function showPage(page) {
         var pages = {
-            'about': '<h1>About SIT</h1><p>Built for baristas, by baristas. Master latte art and coffee knowledge from farm to cup.</p><p>WhatsApp: ' + CONFIG.phone + '</p>',
-            'contact': '<h1>Contact</h1><p>WhatsApp: ' + CONFIG.phone + '</p><p>Selar: ' + CONFIG.selarLink + '</p>',
-            'privacy': '<h1>Privacy</h1><p>Your data stays on your device. Payment processing by Selar.</p>',
-            'terms': '<h1>Terms</h1><p>Pro access is for individual use. Content is copyrighted.</p>'
+            'about': '<h1>About SĪT</h1><p>SĪT is a platform for baristas to practice latte art with real fluid simulation and master coffee knowledge from farm to cup. Built by baristas, for baristas.</p><p><strong>WhatsApp:</strong> ' + CONFIG.phone + '</p><p><strong>Selar:</strong> <a href="' + CONFIG.selarLink + '" target="_blank">' + CONFIG.selarLink + '</a></p>',
+            'contact': '<h1>Contact Us</h1><p><strong>WhatsApp:</strong> ' + CONFIG.phone + '</p><p><strong>Selar:</strong> <a href="' + CONFIG.selarLink + '" target="_blank">' + CONFIG.selarLink + '</a></p><p>We respond within 15 minutes during business hours.</p>',
+            'privacy': '<h1>Privacy Policy</h1><p>Your data stays on your device. We do not collect or share personal information. Payment processing is handled securely by Selar. Pro codes are validated via Google Sheets.</p>',
+            'terms': '<h1>Terms of Service</h1><p>Pro subscriptions are valid for 30 days from activation. Access codes are for individual use only. Academy content is copyrighted. Refund requests are handled via Selar on a case-by-case basis.</p>'
         };
         document.getElementById('chapterContent').innerHTML = pages[page] || '<h1>Coming Soon</h1>';
         document.getElementById('chapterModal').classList.add('active');
     }
 
+    // ===== PUBLIC API =====
     return {
         hasAccess: hasAccess,
         startTrial: startTrial,
