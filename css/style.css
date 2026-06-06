@@ -165,35 +165,28 @@ section { padding:3rem 1rem; }
 
 /* Canvas Area */
 .canvas-area { display: flex; align-items: center; justify-content: center; background: #FDFCF9; position: relative; overflow: hidden; order: 1; min-height: 400px; }
+
+/* Cup wrapper — outer container */
 .cup-wrapper { position: relative; width: 260px; height: 260px; display: flex; align-items: center; justify-content: center; }
 
-/* Saucer */
+/* Saucer — stays flat, never tilts */
 .cup-saucer { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 240px; height: 20px; background: linear-gradient(180deg, #E8D5C0 0%, #D4C0A8 100%); border-radius: 50%; box-shadow: 0 4px 12px rgba(44,24,16,0.15); }
 
-/* Cup body - CIRCULAR */
-.cup-body {
-    position: absolute;
-    bottom: 14px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 200px;
-    height: 200px;
-    background: linear-gradient(160deg, #f5ede0 0%, #e8d5c0 40%, #d4bfa0 100%);
-    border-radius: 50%;
-    box-shadow: inset 2px 0 4px rgba(255,255,255,0.3), inset -2px 0 4px rgba(0,0,0,0.05), 0 6px 20px rgba(44,24,16,0.2);
-    overflow: hidden;
-    transition: transform 0.4s ease;
-}
+/* Tilt wrapper — rotates cup + handle together */
+.cup-tilt-wrapper { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); transition: transform 0.4s ease; }
+
+/* Cup body */
+.cup-body { width: 200px; height: 200px; background: linear-gradient(160deg, #f5ede0 0%, #e8d5c0 40%, #d4bfa0 100%); border-radius: 50%; box-shadow: inset 2px 0 4px rgba(255,255,255,0.3), inset -2px 0 4px rgba(0,0,0,0.05), 0 6px 20px rgba(44,24,16,0.2); overflow: hidden; position: relative; }
 
 /* Cup rim */
 .cup-rim { position: absolute; top: 0; left: 0; right: 0; height: 12px; background: linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 100%); border-radius: 50% 50% 0 0; }
 
-/* Canvas stack - CIRCULAR */
+/* Canvas stack */
 .canvas-stack { position: absolute; top: 8px; left: 8px; right: 8px; bottom: 8px; border-radius: 50%; overflow: hidden; }
 .canvas-layer { position: absolute; inset: 0; }
 
-/* Handle */
-.cup-handle { position: absolute; right: -22px; top: 50%; transform: translateY(-50%); width: 26px; height: 44px; border: 5px solid #e8d5c0; border-left: none; border-radius: 0 16px 16px 0; }
+/* Handle — tilts with cup */
+.cup-handle { position: absolute; right: -24px; top: 50%; transform: translateY(-50%); width: 26px; height: 44px; border: 5px solid #e8d5c0; border-left: none; border-radius: 0 16px 16px 0; }
 
 /* Guide */
 #guideCanvas { opacity: 0.35; pointer-events: none; }
