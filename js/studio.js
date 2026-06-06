@@ -344,17 +344,16 @@ var Studio = (function() {
     }
 
     // ===== TILT =====
-    function tiltCup(dir) {
-        tiltAngle = Math.max(-15, Math.min(15, tiltAngle+dir*5));
-        var cupBody = document.getElementById('cupBody');
-        if (cupBody) cupBody.style.transform = 'rotate('+tiltAngle+'deg)';
-        var indicator = document.getElementById('tiltIndicator');
-        if (indicator) indicator.style.transform = 'rotate('+tiltAngle+'deg)';
-        var label = tiltAngle===0?'Level':(tiltAngle<0?Math.abs(tiltAngle)+'° Left':tiltAngle+'° Right');
-        var tl = document.getElementById('tiltLabel');
-        if (tl) tl.textContent = label;
-    }
-
+function tiltCup(dir) {
+    tiltAngle = Math.max(-15, Math.min(15, tiltAngle + dir * 5));
+    var wrapper = document.getElementById('cupTiltWrapper');
+    if (wrapper) wrapper.style.transform = 'translateX(-50%) rotate(' + tiltAngle + 'deg)';
+    var indicator = document.getElementById('tiltIndicator');
+    if (indicator) indicator.style.transform = 'rotate(' + tiltAngle + 'deg)';
+    var label = tiltAngle === 0 ? 'Level' : (tiltAngle < 0 ? Math.abs(tiltAngle) + '° Left' : tiltAngle + '° Right');
+    var tl = document.getElementById('tiltLabel');
+    if (tl) tl.textContent = label;
+}
        // ===== UNDO (fixed async ordering) =====
     var undoQueue = [];
     var isRestoring = false;
