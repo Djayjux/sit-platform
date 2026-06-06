@@ -355,34 +355,63 @@ var Studio = (function() {
         if (tl) tl.textContent = label;
     }
 
-    // ===== UNDO =====
+       // ===== UNDO (fixed async ordering) =====
+    var undoQueue = [];
+    var isRestoring = false;
+
+    function processUndoQueue() {
+        if (undoQueue.length === 0) { 
+            isRestoring = false; 
+            return; 
+        }
+        isRestoring = true;
+        var snapshot = undoQueue.shift();
+        var img = new Image();
+        img.onload = function() {
+            milkCtx.clearRect(0, 0, W, H);
+            milkCtx.drawImage(img, 0, 0);
+            processUndoQueue();
+        };
+        img.onerror = function() { 
+            processUndoQueue(); 
+        };
+        img.src = snapshot;
+    }
+
     function undoStroke() {
-        if (undoLoading) return; // Block rapid undo
+        if (isRestoring) return; // Block rapid undo while restoring
         if (allStrokes.length === 0) {
-            milkCtx.clearRect(0,0,W,H);
+            milkCtx.clearRect(0, 0, W, H);
             strokeCount = 0;
-            var sc = document.getElementById('strokeCount'); if (sc) sc.textContent = 0;
+            var sc = document.getElementById('strokeCount'); 
+            if (sc) sc.textContent = 0;
             resetStrokeHistory();
-            if (currentMode==='guided') { currentStep=0; updateGuideSteps(); }
+            if (currentMode === 'guided') { 
+                currentStep = 0; 
+                updateGuideSteps(); 
+            }
             return;
         }
 
-        // Remove last stroke snapshot
         allStrokes.pop();
-        strokeCount = Math.max(0, strokeCount-1);
-        var sc = document.getElementById('strokeCount'); if (sc) sc.textContent = strokeCount;
+        strokeCount = Math.max(0, strokeCount - 1);
+        var sc = document.getElementById('strokeCount'); 
+        if (sc) sc.textContent = strokeCount;
         removeLastStrokeHistoryItem();
 
         if (allStrokes.length > 0) {
-            // Restore from previous snapshot
-            restoreSnapshot(allStrokes[allStrokes.length-1]);
+            // Queue the restore to prevent race conditions
+            undoQueue.push(allStrokes[allStrokes.length - 1]);
+            if (!isRestoring) processUndoQueue();
         } else {
-            milkCtx.clearRect(0,0,W,H);
+            milkCtx.clearRect(0, 0, W, H);
         }
 
-        if (currentMode==='guided' && currentStep>0) { currentStep--; updateGuideSteps(); }
+        if (currentMode === 'guided' && currentStep > 0) { 
+            currentStep--; 
+            updateGuideSteps(); 
+        }
     }
-
     function clearCanvas() {
         milkCtx.clearRect(0,0,W,H);
         allStrokes = [];
