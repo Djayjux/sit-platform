@@ -96,23 +96,37 @@ var Studio = (function() {
             else startGhostAnimation();
         });
 
-            window.addEventListener('resize', function() {
-        var tc = document.createElement('canvas');
-        tc.width = W; tc.height = H;
-        tc.getContext('2d').drawImage(milkCanvas, 0, 0);
+               window.addEventListener('resize', function() {
+        // Save current milk layer BEFORE resize
+        var savedMilk = document.createElement('canvas');
+        savedMilk.width = W;
+        savedMilk.height = H;
+        var savedCtx = savedMilk.getContext('2d');
+        savedCtx.drawImage(milkCanvas, 0, 0);
+        
+        // Save current espresso base
+        var savedEspresso = document.createElement('canvas');
+        savedEspresso.width = W;
+        savedEspresso.height = H;
+        var savedEspCtx = savedEspresso.getContext('2d');
+        savedEspCtx.drawImage(espressoCanvas, 0, 0);
         
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(function() {
+            // Resize all canvases (this clears them)
             resizeCanvases();
-            milkCtx.drawImage(tc, 0, 0, W, H);
-            drawEspressoBase();
+            
+            // Restore espresso base scaled to new size
+            espCtx.drawImage(savedEspresso, 0, 0, W, H);
+            
+            // Restore milk layer scaled to new size
+            milkCtx.drawImage(savedMilk, 0, 0, W, H);
+            
+            // Redraw guide
             drawGuide();
-        }, 150);
-    });
-    }
-
-        var resizeTimeout;
-    
+        }, 200);
+    });   
+        
     function resizeCanvases() {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(function() {
