@@ -373,7 +373,9 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
     .dash-stats { grid-template-columns: repeat(4, 1fr); }
     .content h1 { font-size: 1.8rem; }
 }
-
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
 /* Print */
 @media print {
     .navbar, .whatsapp-float, .toast, .footer, .btn, .modal, .overlay, .score-badge, .controls { display: none !important; }
