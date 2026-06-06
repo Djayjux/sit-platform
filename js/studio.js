@@ -125,7 +125,7 @@ var Studio = (function() {
             // Redraw guide
             drawGuide();
         }, 200);
-    });   
+        }   
         
     function resizeCanvases() {
         clearTimeout(resizeTimeout);
