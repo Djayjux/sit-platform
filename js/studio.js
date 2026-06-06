@@ -479,7 +479,71 @@ var Studio = (function() {
         guideCtx.textAlign = 'center';
         guideCtx.fillText('↓', ax, ay+pulse);
     }
-
+    function filterPatterns(cat, btnElement) {
+        document.querySelectorAll('.pattern-tab').forEach(function(b) {
+            b.classList.remove('active');
+        });
+        if (btnElement) btnElement.classList.add('active');
+        
+        var grid = document.getElementById('patternGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+        
+        var filtered = cat === 'all' ? patterns : patterns.filter(function(p) {
+            return p.cat === cat;
+        });
+        
+        filtered.forEach(function(p) {
+            var card = document.createElement('div');
+            card.className = 'pattern-card' + (p.id === currentPattern ? ' active' : '');
+            card.addEventListener('click', function() { selectPattern(p.id, this); });
+            
+            var mini = document.createElement('canvas');
+            mini.width = 40; mini.height = 40;
+            var mctx = mini.getContext('2d');
+            var bg = mctx.createRadialGradient(20, 20, 0, 20, 20, 20);
+            bg.addColorStop(0, '#5C3018');
+            bg.addColorStop(1, '#1A0D06');
+            mctx.fillStyle = bg;
+            mctx.beginPath();
+            mctx.arc(20, 20, 20, 0, Math.PI * 2);
+            mctx.fill();
+            
+            mctx.strokeStyle = p.color;
+            mctx.lineWidth = 1;
+            mctx.setLineDash([2, 3]);
+            mctx.globalAlpha = 0.6;
+            p.guide.forEach(function(s) {
+                if (s.type === 'circle') {
+                    mctx.beginPath();
+                    mctx.arc(s.cx * 40, s.cy * 40, s.r * 40, 0, Math.PI * 2);
+                    mctx.stroke();
+                } else if (s.type === 'path') {
+                    mctx.beginPath();
+                    s.points.forEach(function(pt, i) {
+                        if (i === 0) mctx.moveTo(pt[0] * 40, pt[1] * 40);
+                        else mctx.lineTo(pt[0] * 40, pt[1] * 40);
+                    });
+                    mctx.stroke();
+                }
+            });
+            mctx.globalAlpha = 1;
+            
+            var dots = document.createElement('div');
+            dots.className = 'pattern-difficulty';
+            for (var i = 0; i < 5; i++) {
+                var d = document.createElement('div');
+                d.className = 'diff-dot' + (i < p.difficulty ? ' filled' : '');
+                dots.appendChild(d);
+            }
+            
+            card.appendChild(mini);
+            card.innerHTML += '<div class="pattern-card-label">' + p.name + '</div>';
+            card.appendChild(dots);
+            card.insertBefore(mini, card.firstChild);
+            grid.appendChild(card);
+        });
+    }    
     function startGhostAnimation() {
         stopGhostAnimation();
         function anim() { ghostFrame++; drawGuide(); ghostAnimId = requestAnimationFrame(anim); }
@@ -581,28 +645,30 @@ var Studio = (function() {
         var hist=document.getElementById('strokeHistory'); if (!hist) return;
         hist.innerHTML='<div style="font-size:9px;color:var(--text-muted);">No strokes yet</div>';
     }
-
-return {
-    init: init,
-    setMode: setMode,
-    setThickness: setThickness,
-    tiltCup: tiltCup,
-    undoStroke: undoStroke,
-    clearCanvas: clearCanvas,
-    scoreCanvas: scoreCanvas,
-    downloadCanvas: downloadCanvas,
-    updateBrushLabel: updateBrushLabel,
-    updateFlowLabel: updateFlowLabel,
-    updateSoftLabel: updateSoftLabel,
-    filterPatterns: filterPatterns,
-    getDataURL: function() { 
-        if (!outCtx || !espressoCanvas || !milkCanvas) return '';
-        outCtx.clearRect(0,0,W,H);
-        outCtx.drawImage(espressoCanvas,0,0);
-        outCtx.drawImage(milkCanvas,0,0);
-        return outputCanvas.toDataURL('image/png');
-    }
-};    
+    // ===== PUBLIC API =====
+    return {
+        init: init,
+        setMode: setMode,
+        setThickness: setThickness,
+        tiltCup: tiltCup,
+        undoStroke: undoStroke,
+        clearCanvas: clearCanvas,
+        scoreCanvas: scoreCanvas,
+        downloadCanvas: downloadCanvas,
+        updateBrushLabel: updateBrushLabel,
+        updateFlowLabel: updateFlowLabel,
+        updateSoftLabel: updateSoftLabel,
+        filterPatterns: filterPatterns,
+        selectPattern: selectPattern,
+        getDataURL: function() { 
+            if (!outCtx || !espressoCanvas || !milkCanvas) return '';
+            outCtx.clearRect(0,0,W,H);
+            outCtx.drawImage(espressoCanvas,0,0);
+            outCtx.drawImage(milkCanvas,0,0);
+            return outputCanvas.toDataURL('image/png');
+        },
+        getStrokes: function() { return allStrokes; }
+    };
 })();
 
 window.addEventListener('DOMContentLoaded', function() { Studio.init(); });
