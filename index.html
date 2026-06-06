@@ -51,6 +51,15 @@
         </div>
     </section>
 
+    <script>
+    window.SIT_LOADED = { studio: false, app: false, academy: false, beyond: false };
+    window.addEventListener('error', function(e) {
+        if (e.target.tagName === 'SCRIPT') {
+            console.error('Failed to load:', e.target.src);
+            document.body.innerHTML += '<div style="position:fixed;bottom:20px;left:20px;right:20px;background:#F8D7DA;color:#721C24;padding:12px;border-radius:8px;z-index:9999;text-align:center;font-size:14px;">⚠️ Some features could not load. Please refresh the page or check your connection.</div>';
+        }
+    }, true);
+</script>
     <!-- ===== STUDIO ===== -->
     <section class="studio-section" id="studio">
         <div class="section-header">
