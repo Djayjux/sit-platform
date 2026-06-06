@@ -96,32 +96,43 @@ var Studio = (function() {
             else startGhostAnimation();
         });
 
-        window.addEventListener('resize', function() {
-            var tc = document.createElement('canvas');
-            tc.width = W; tc.height = H;
-            tc.getContext('2d').drawImage(milkCanvas, 0, 0);
+            window.addEventListener('resize', function() {
+        var tc = document.createElement('canvas');
+        tc.width = W; tc.height = H;
+        tc.getContext('2d').drawImage(milkCanvas, 0, 0);
+        
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(function() {
             resizeCanvases();
             milkCtx.drawImage(tc, 0, 0, W, H);
             drawEspressoBase();
             drawGuide();
-        });
+        }, 150);
+    });
     }
 
+        var resizeTimeout;
+    
     function resizeCanvases() {
-        var stack = document.getElementById('canvasStack');
-        if (!stack) return;
-        var rect = stack.getBoundingClientRect();
-        W = Math.floor(rect.width);
-        H = Math.floor(rect.height);
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(function() {
+            var stack = document.getElementById('canvasStack');
+            if (!stack) return;
+            var rect = stack.getBoundingClientRect();
+            W = Math.floor(rect.width);
+            H = Math.floor(rect.height);
 
-        [espressoCanvas, milkCanvas, guideCanvas, outputCanvas].forEach(function(c) {
-            if (c) { c.width = W; c.height = H; }
-        });
+            [espressoCanvas, milkCanvas, guideCanvas, outputCanvas].forEach(function(c) {
+                if (c) { c.width = W; c.height = H; }
+            });
 
-        undoScreen.width = W;
-        undoScreen.height = H;
+            undoScreen.width = W;
+            undoScreen.height = H;
+            
+            drawEspressoBase();
+            drawGuide();
+        }, 150);
     }
-
     // ===== ESPRESSO BASE =====
     function drawEspressoBase() {
         if (!espCtx || W === 0) return;
