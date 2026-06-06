@@ -227,25 +227,28 @@ var Studio = (function() {
     }
 
     function startPour(e) {
-        e.preventDefault();
-        if (typeof SIT !== 'undefined' && !SIT.hasAccess() && currentMode === 'freestyle') {
-            SIT.showUpgrade(); return;
+    e.preventDefault();
+    
+    // Check access for freestyle mode
+    if (currentMode === 'freestyle') {
+        if (typeof SIT !== 'undefined' && !SIT.canFreestyle()) {
+            SIT.showUpgrade();
+            return;
         }
-
-        saveUndoSnapshot();
-
-        isPouring = true;
-        var pos = getPointerPos(e, milkCanvas);
-        lastX = pos.x; lastY = pos.y;
-        currentStroke = [{x:lastX, y:lastY}];
-
-        var hint = document.getElementById('pourHint');
-        if (hint) hint.classList.add('hidden');
-
-        var r = getBrushRadius(), f = getFlow(), s = getSoftness();
-        drawSoftStroke(milkCtx, lastX, lastY, r, f, s);
+        if (typeof SIT !== 'undefined') SIT.useFreestyleCredit();
     }
-
+    
+    saveUndoSnapshot();
+    isPouring = true;
+    var pos = getPointerPos(e, milkCanvas);
+    lastX = pos.x; lastY = pos.y;
+    currentStroke = [{x:lastX, y:lastY}];
+    var hint = document.getElementById('pourHint');
+    if (hint) hint.classList.add('hidden');
+    var r = getBrushRadius(), f = getFlow(), s = getSoftness();
+    drawSoftStroke(milkCtx, lastX, lastY, r, f, s);
+}
+    
     function continuePour(e) {
         if (!isPouring) return;
         e.preventDefault();
@@ -579,20 +582,27 @@ var Studio = (function() {
         hist.innerHTML='<div style="font-size:9px;color:var(--text-muted);">No strokes yet</div>';
     }
 
-    // ===== PUBLIC API =====
-    return {
-        init: init,
-        setMode: setMode,
-        setThickness: setThickness,
-        tiltCup: tiltCup,
-        undoStroke: undoStroke,
-        clearCanvas: clearCanvas,
-        scoreCanvas: scoreCanvas,
-        downloadCanvas: downloadCanvas,
-        updateBrushLabel: updateBrushLabel,
-        updateFlowLabel: updateFlowLabel,
-        updateSoftLabel: updateSoftLabel,
-    };
+return {
+    init: init,
+    setMode: setMode,
+    setThickness: setThickness,
+    tiltCup: tiltCup,
+    undoStroke: undoStroke,
+    clearCanvas: clearCanvas,
+    scoreCanvas: scoreCanvas,
+    downloadCanvas: downloadCanvas,
+    updateBrushLabel: updateBrushLabel,
+    updateFlowLabel: updateFlowLabel,
+    updateSoftLabel: updateSoftLabel,
+    filterPatterns: filterPatterns,
+    getDataURL: function() { 
+        if (!outCtx || !espressoCanvas || !milkCanvas) return '';
+        outCtx.clearRect(0,0,W,H);
+        outCtx.drawImage(espressoCanvas,0,0);
+        outCtx.drawImage(milkCanvas,0,0);
+        return outputCanvas.toDataURL('image/png');
+    }
+};    
 })();
 
 window.addEventListener('DOMContentLoaded', function() { Studio.init(); });
