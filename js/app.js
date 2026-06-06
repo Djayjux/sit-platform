@@ -78,14 +78,26 @@ var SIT = (function() {
     }
 
     // ===== INIT =====
-    function initApp() {
+       function initApp() {
         updateProUI();
         if (typeof Academy !== 'undefined' && Academy.populateAcademy) Academy.populateAcademy();
         if (typeof Beyond !== 'undefined' && Beyond.populateBeyond) Beyond.populateBeyond();
+        
+        // Trial expiry notification
+        if (state.trialStart && state.trialDays === 0 && !state.proActive) {
+            var shown = localStorage.getItem('sit_trialExpiryShown');
+            if (!shown) {
+                setTimeout(function() {
+                    showToast('⏰ Your 7-day trial has ended. Upgrade to Pro for lifetime access!');
+                }, 1500);
+                localStorage.setItem('sit_trialExpiryShown', 'true');
+            }
+        }
+        
         console.log('☕ SĪT ready. ' + (state.loggedIn ? 'Logged in as @' + state.userName : 'Not logged in.'));
         console.log('🔗 Selar: ' + CONFIG.selarLink);
     }
-
+    
     function startTrial() {
         if (!state.trialStart) {
             state.trialStart = new Date().toISOString();
@@ -117,11 +129,25 @@ var SIT = (function() {
         setTimeout(function() { t.classList.remove('show'); }, 3000);
     }
 
-    function updateProUI() {
+       function updateProUI() {
         var db = document.getElementById('designerBtn');
         if (db) db.style.display = hasAccess() ? 'inline-block' : 'none';
+        
+        // Pro badge in studio topbar
+        var topbarLogo = document.querySelector('.topbar-logo');
+        if (topbarLogo) {
+            if (state.proActive) {
+                topbarLogo.textContent = 'SĪT Studio 💎';
+                topbarLogo.style.color = 'var(--success)';
+            } else if (state.trialDays > 0) {
+                topbarLogo.textContent = 'SĪT Studio ⏳';
+                topbarLogo.style.color = 'var(--accent)';
+            } else {
+                topbarLogo.textContent = 'SĪT Studio';
+                topbarLogo.style.color = 'var(--accent)';
+            }
+        }
     }
-
     // ===== SCORING =====
     function scorePour() {
         if (!hasAccess()) { showUpgrade(); return; }
@@ -211,13 +237,14 @@ var SIT = (function() {
         if (el) el.classList.remove('active');
     }
 
-    function redeemProCode() {
+        function redeemProCode() {
         var inp = document.getElementById('accessCodeInput');
         var err = document.getElementById('codeError');
         if (!inp || !err) return;
         var code = inp.value.trim().toUpperCase();
         if (!code) { err.textContent = 'Enter a code.'; err.style.display = 'block'; return; }
-        err.textContent = '⏳ Validating...';
+        
+        err.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.6s linear infinite;margin-right:6px;vertical-align:middle;"></span> Validating...';
         err.style.color = 'var(--text-muted)';
         err.style.display = 'block';
 
@@ -226,14 +253,14 @@ var SIT = (function() {
             .then(function(response) { return response.json(); })
             .then(function(data) {
                 if (data.valid) { activatePro(code); }
-                else { err.textContent = data.message || 'Invalid code.'; err.style.color = 'var(--error)'; }
+                else { err.textContent = data.message || 'Invalid code.'; err.style.color = 'var(--error)'; err.innerHTML = err.textContent; }
             })
             .catch(function() {
                 if (code.indexOf('SIT-PRO-') === 0 && code.length > 8) { activatePro(code); }
-                else { err.textContent = 'Cannot validate. Check connection or WhatsApp ' + CONFIG.phone; err.style.color = 'var(--error)'; }
+                else { err.textContent = 'Cannot validate. WhatsApp ' + CONFIG.phone; err.style.color = 'var(--error)'; err.innerHTML = err.textContent; }
             });
     }
-
+    
     function activatePro(code) {
         state.proActive = true;
         state.proCode = code;
