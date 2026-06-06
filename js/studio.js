@@ -79,7 +79,7 @@ var Studio = (function() {
         if (!espressoCanvas || !milkCanvas) { setTimeout(init, 200); return; }
 
         espCtx = espressoCanvas.getContext('2d', { alpha: false });
-        milkCtx = milkCanvas.getContext('2d', { alpha: true });
+        milkCtx = milkCanvas.getContext('2d', { alpha: true,willReadFrequently: false});
         guideCtx = guideCanvas.getContext('2d', { alpha: true });
         outCtx = outputCanvas.getContext('2d', { alpha: true });
 
@@ -396,30 +396,64 @@ var Studio = (function() {
         if (currentMode==='guided') drawGuide();
     }
 
-    // ===== SCORE =====
+       // ===== SCORE (optimized) =====
     function scoreCanvas() {
-        if (strokeCount===0) return;
+        if (strokeCount === 0) return;
+        
+        // Create a temporary canvas with willReadFrequently for scoring
+        var tempCanvas = document.createElement('canvas');
+        tempCanvas.width = W;
+        tempCanvas.height = H;
+        var tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+        
+        // Composite the layers
+        tempCtx.drawImage(espressoCanvas, 0, 0);
+        tempCtx.drawImage(milkCanvas, 0, 0);
+        
+        // Sample-based scoring (every 20px = much faster)
         var sampleSize = 20;
         var milkPixels = 0, totalSamples = 0;
-        for (var sx=0; sx<W; sx+=sampleSize) {
-            for (var sy=0; sy<H; sy+=sampleSize) {
+        
+        for (var sx = 0; sx < W; sx += sampleSize) {
+            for (var sy = 0; sy < H; sy += sampleSize) {
                 totalSamples++;
                 try {
-                    var px = milkCtx.getImageData(sx, sy, 1, 1).data;
-                    if (px[3] > 20) milkPixels++;
-                } catch(e) { /* skip off-canvas pixels */ }
+                    var px = tempCtx.getImageData(sx, sy, 1, 1).data;
+                    // Check if this pixel is milk (white/cream colored)
+                    if (px[0] > 200 && px[1] > 180 && px[2] > 150 && px[3] > 20) {
+                        milkPixels++;
+                    }
+                } catch(e) { /* skip edge pixels */ }
             }
         }
+        
         if (totalSamples === 0) return;
-        var coverage = milkPixels/totalSamples;
-        var strokeBonus = Math.min(strokeCount*8, 30);
-        var rawScore = Math.min(100, Math.round(coverage*400+strokeBonus+20));
+        
+        var coverage = milkPixels / totalSamples;
+        var strokeBonus = Math.min(strokeCount * 8, 30);
+        var rawScore = Math.min(100, Math.round(coverage * 400 + strokeBonus + 20));
         var score = Math.max(10, rawScore);
-        var sv = document.getElementById('scoreValue'); if (sv) sv.textContent = score;
-        var sb = document.getElementById('scoreBadge'); if (sb) sb.classList.add('visible');
-        setTimeout(function(){ var sb2 = document.getElementById('scoreBadge'); if (sb2) sb2.classList.remove('visible'); }, 3500);
+        
+        var sv = document.getElementById('scoreValue');
+        if (sv) sv.textContent = score;
+        
+        var sb = document.getElementById('scoreBadge');
+        if (sb) sb.classList.add('visible');
+        
+        setTimeout(function() {
+            var sb2 = document.getElementById('scoreBadge');
+            if (sb2) sb2.classList.remove('visible');
+        }, 3500);
+        
+        // Show score overlay
+        var so = document.getElementById('scoreOverlay');
+        if (so) { so.classList.add('active'); so.style.display = 'flex'; }
+        
+        // Also call SIT scoring if available
+        if (typeof SIT !== 'undefined' && SIT.scorePour) {
+            // SIT handles the detailed breakdown display
+        }
     }
-
     // ===== DOWNLOAD =====
     function downloadCanvas() {
         if (!outCtx || !espressoCanvas || !milkCanvas) return;
