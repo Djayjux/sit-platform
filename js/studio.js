@@ -425,11 +425,11 @@ var Studio = (function() {
         if (currentMode==='guided') drawGuide();
     }
 
-       // ===== SCORE (optimized) =====
+        // ===== SCORE (real analysis) =====
     function scoreCanvas() {
         if (strokeCount === 0) return;
         
-        // Create a temporary canvas with willReadFrequently for scoring
+        // Create temp canvas for scoring
         var tempCanvas = document.createElement('canvas');
         tempCanvas.width = W;
         tempCanvas.height = H;
@@ -439,32 +439,62 @@ var Studio = (function() {
         tempCtx.drawImage(espressoCanvas, 0, 0);
         tempCtx.drawImage(milkCanvas, 0, 0);
         
-        // Sample-based scoring (every 20px = much faster)
-        var sampleSize = 20;
-        var milkPixels = 0, totalSamples = 0;
+        // Get center of cup
+        var cx = W / 2, cy = H / 2, cupR = Math.min(W, H) / 2 - 10;
+        
+        // Sample points for analysis
+        var sampleSize = 15;
+        var milkPixels = 0, totalPixels = 0;
+        var leftMilk = 0, rightMilk = 0;
+        var centerMilk = 0, edgeMilk = 0;
+        var topMilk = 0, bottomMilk = 0;
         
         for (var sx = 0; sx < W; sx += sampleSize) {
             for (var sy = 0; sy < H; sy += sampleSize) {
-                totalSamples++;
+                var dist = Math.sqrt((sx - cx) * (sx - cx) + (sy - cy) * (sy - cy));
+                if (dist > cupR) continue; // Outside cup
+                
+                totalPixels++;
                 try {
                     var px = tempCtx.getImageData(sx, sy, 1, 1).data;
-                    // Check if this pixel is milk (white/cream colored)
-                    if (px[0] > 200 && px[1] > 180 && px[2] > 150 && px[3] > 20) {
+                    var isMilk = (px[0] > 180 && px[1] > 160 && px[2] > 130 && px[3] > 30);
+                    
+                    if (isMilk) {
                         milkPixels++;
+                        if (sx < cx) leftMilk++;
+                        else rightMilk++;
+                        if (dist < cupR * 0.4) centerMilk++;
+                        else edgeMilk++;
+                        if (sy < cy) topMilk++;
+                        else bottomMilk++;
                     }
-                } catch(e) { /* skip edge pixels */ }
+                } catch(e) { /* skip */ }
             }
         }
         
-        if (totalSamples === 0) return;
+        if (totalPixels === 0) return;
         
-        var coverage = milkPixels / totalSamples;
-        var strokeBonus = Math.min(strokeCount * 8, 30);
-        var rawScore = Math.min(100, Math.round(coverage * 400 + strokeBonus + 20));
-        var score = Math.max(10, rawScore);
+        // Calculate metrics
+        var coverage = Math.min(1, milkPixels / totalPixels);
+        var symmetry = Math.max(0, 1 - Math.abs(leftMilk - rightMilk) / Math.max(1, milkPixels));
+        var centering = Math.max(0, centerMilk / Math.max(1, milkPixels));
+        var balance = Math.max(0, 1 - Math.abs(topMilk - bottomMilk) / Math.max(1, milkPixels));
         
+        // Convert to scores (1-10 scale)
+        var coverageScore = Math.min(10, Math.round(coverage * 10));
+        var symmetryScore = Math.min(10, Math.round(symmetry * 10));
+        var centeringScore = Math.min(10, Math.round(centering * 15));
+        var balanceScore = Math.min(10, Math.round(balance * 10));
+        var strokeBonus = Math.min(2, Math.floor(strokeCount / 5));
+        
+        var overall = Math.min(10, Math.round(
+            (coverageScore * 0.3 + symmetryScore * 0.3 + centeringScore * 0.2 + balanceScore * 0.2) + strokeBonus
+        ));
+        var overallDecimal = (overall / 10).toFixed(1);
+        
+        // Display score
         var sv = document.getElementById('scoreValue');
-        if (sv) sv.textContent = score;
+        if (sv) sv.textContent = overallDecimal;
         
         var sb = document.getElementById('scoreBadge');
         if (sb) sb.classList.add('visible');
@@ -472,17 +502,51 @@ var Studio = (function() {
         setTimeout(function() {
             var sb2 = document.getElementById('scoreBadge');
             if (sb2) sb2.classList.remove('visible');
-        }, 3500);
+        }, 4000);
         
-        // Show score overlay
-        var so = document.getElementById('scoreOverlay');
-        if (so) { so.classList.add('active'); so.style.display = 'flex'; }
-        
-        // Also call SIT scoring if available
-        if (typeof SIT !== 'undefined' && SIT.scorePour) {
-            // SIT handles the detailed breakdown display
+        // Also update SIT state
+        if (typeof SIT !== 'undefined') {
+            var state = SIT.getState();
+            if (state && overallDecimal > state.bestScore) {
+                state.bestScore = parseFloat(overallDecimal);
+                localStorage.setItem('sit_bestScore', state.bestScore);
+            }
         }
+        
+        // Show detailed overlay
+        showDetailedScore(coverageScore, symmetryScore, centeringScore, balanceScore, overallDecimal);
     }
+    
+    function showDetailedScore(cov, sym, cen, bal, overall) {
+        var so = document.getElementById('scoreOverlay');
+        if (!so) return;
+        so.classList.add('active');
+        so.style.display = 'flex';
+        
+        var sn = document.getElementById('scoreNumber');
+        if (sn) sn.textContent = overall;
+        
+        var se = document.getElementById('scoreEmoji');
+        if (se) se.textContent = overall >= 8 ? '🌟' : overall >= 6 ? '👍' : '💪';
+        
+        var sd = document.getElementById('scoreDetail');
+        if (sd) sd.innerHTML =
+            '<div><div class="score-m-label">Coverage</div><div class="score-m-bar"><div class="score-m-fill" style="width:' + (cov * 10) + '%"></div></div></div>' +
+            '<div><div class="score-m-label">Symmetry</div><div class="score-m-bar"><div class="score-m-fill" style="width:' + (sym * 10) + '%"></div></div></div>' +
+            '<div><div class="score-m-label">Centering</div><div class="score-m-bar"><div class="score-m-fill" style="width:' + (cen * 10) + '%"></div></div></div>' +
+            '<div><div class="score-m-label">Balance</div><div class="score-m-bar"><div class="score-m-fill" style="width:' + (bal * 10) + '%"></div></div></div>';
+        
+        var tips = [];
+        if (cov < 5) tips.push('Pour more milk to cover the surface.');
+        if (sym < 5) tips.push('Try to mirror your left and right movements.');
+        if (cen < 5) tips.push('Keep your pour centered in the cup.');
+        if (bal < 5) tips.push('Balance your pour between top and bottom.');
+        if (tips.length === 0) tips.push('Great pour! Try a more complex pattern.');
+        
+        var st = document.getElementById('scoreTip');
+        if (st) st.textContent = tips[Math.floor(Math.random() * tips.length)];
+    }
+    
     // ===== DOWNLOAD =====
     function downloadCanvas() {
         if (!outCtx || !espressoCanvas || !milkCanvas) return;
