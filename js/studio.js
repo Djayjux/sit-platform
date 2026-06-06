@@ -1,6 +1,6 @@
 // ==========================================
-// SĪT MILK CANVAS ENGINE — Mobile Safe v2
-// All errors fixed
+// SĪT MILK CANVAS ENGINE — Complete v4
+// All fixes applied, no errors
 // ==========================================
 
 var Studio = (function() {
@@ -21,7 +21,9 @@ var Studio = (function() {
     var ghostFrame = 0;
     var ghostAnimId = null;
     var MAX_UNDO = 20;
-    var undoLoading = false; // Prevent rapid undo
+    var undoQueue = [];
+    var isRestoring = false;
+    var resizeTimeout;
 
     var undoScreen = document.createElement('canvas');
     var undoCtx = undoScreen.getContext('2d');
@@ -30,14 +32,14 @@ var Studio = (function() {
 
     var patterns = [
         {
-            id: 'heart', name: 'Heart', difficulty: 2, color: '#e8c4a0',
+            id: 'heart', name: 'Heart', difficulty: 2, color: '#e8c4a0', cat: 'heart',
             steps: ['Pour a wide base circle in center','Wiggle left-right as you pull back','Pull sharply through the base','Lift and finish with a clean tip'],
             guide: [
                 { type: 'circle', cx: 0.5, cy: 0.52, r: 0.22 },
                 { type: 'path', points: [[0.5,0.42],[0.42,0.35],[0.35,0.38],[0.33,0.46],[0.38,0.54],[0.5,0.62],[0.62,0.54],[0.67,0.46],[0.65,0.38],[0.58,0.35],[0.5,0.42]] }
             ]
         }, {
-            id: 'tulip', name: 'Tulip', difficulty: 2, color: '#ddb88a',
+            id: 'tulip', name: 'Tulip', difficulty: 2, color: '#ddb88a', cat: 'tulip',
             steps: ['Pour 3 stacked circles from bottom up','Make each circle smaller than the last','Pull a thin line down through centers','Add two small leaf curves at base'],
             guide: [
                 { type: 'circle', cx: 0.5, cy: 0.68, r: 0.14 },
@@ -45,26 +47,26 @@ var Studio = (function() {
                 { type: 'circle', cx: 0.5, cy: 0.39, r: 0.08 },
             ]
         }, {
-            id: 'rosetta', name: 'Rosetta', difficulty: 4, color: '#c8a070',
+            id: 'rosetta', name: 'Rosetta', difficulty: 4, color: '#c8a070', cat: 'rosetta',
             steps: ['Start with a thin line down the center','Wiggle outward on both sides evenly','Keep spacing uniform','Pull back through the center to finish'],
             guide: [
                 { type: 'path', points: [[0.5,0.25],[0.5,0.3],[0.42,0.34],[0.5,0.38],[0.58,0.42],[0.5,0.46],[0.42,0.50],[0.5,0.54],[0.58,0.58],[0.5,0.62],[0.5,0.72]] }
             ]
         }, {
-            id: 'swan', name: 'Swan', difficulty: 5, color: '#b89060',
+            id: 'swan', name: 'Swan', difficulty: 5, color: '#b89060', cat: 'swan',
             steps: ['Pour the body as a wide teardrop','Curl the neck in a smooth S-curve','Add the head as a tiny round dot','Finish the tail with a feather fan'],
             guide: [
                 { type: 'path', points: [[0.5,0.65],[0.58,0.60],[0.62,0.52],[0.60,0.44],[0.54,0.38],[0.48,0.34],[0.44,0.30],[0.42,0.26]] },
                 { type: 'circle', cx: 0.40, cy: 0.24, r: 0.04 },
             ]
         }, {
-            id: 'wave', name: 'Wave', difficulty: 3, color: '#d0a878',
+            id: 'wave', name: 'Wave', difficulty: 3, color: '#d0a878', cat: 'swan',
             steps: ['Start from the left edge of the cup','Sweep a smooth S-curve across center','Add ripple echoes above and below','Pull a fine thread from end to start'],
             guide: [
                 { type: 'path', points: [[0.2,0.5],[0.3,0.4],[0.4,0.5],[0.5,0.6],[0.6,0.5],[0.7,0.4],[0.8,0.5]] }
             ]
         }, {
-            id: 'free', name: 'Free Pour', difficulty: 1, color: '#f0c890',
+            id: 'free', name: 'Free Pour', difficulty: 1, color: '#f0c890', cat: 'swan',
             steps: ['Pour anything you like!'], guide: []
         },
     ];
@@ -76,10 +78,10 @@ var Studio = (function() {
         guideCanvas = document.getElementById('guideCanvas');
         outputCanvas = document.getElementById('outputCanvas');
 
-        if (!espressoCanvas || !milkCanvas) { setTimeout(init, 200); return; }
+        if (!espressoCanvas || !milkCanvas) { setTimeout(init, 300); return; }
 
         espCtx = espressoCanvas.getContext('2d', { alpha: false });
-        milkCtx = milkCanvas.getContext('2d', { alpha: true,willReadFrequently: false});
+        milkCtx = milkCanvas.getContext('2d', { alpha: true });
         guideCtx = guideCanvas.getContext('2d', { alpha: true });
         outCtx = outputCanvas.getContext('2d', { alpha: true });
 
@@ -90,92 +92,60 @@ var Studio = (function() {
         bindEvents();
         startGhostAnimation();
 
-        // Stop ghost when tab hidden
         document.addEventListener('visibilitychange', function() {
             if (document.hidden) stopGhostAnimation();
             else startGhostAnimation();
         });
 
-               window.addEventListener('resize', function() {
-        // Save current milk layer BEFORE resize
-        var savedMilk = document.createElement('canvas');
-        savedMilk.width = W;
-        savedMilk.height = H;
-        var savedCtx = savedMilk.getContext('2d');
-        savedCtx.drawImage(milkCanvas, 0, 0);
-        
-        // Save current espresso base
-        var savedEspresso = document.createElement('canvas');
-        savedEspresso.width = W;
-        savedEspresso.height = H;
-        var savedEspCtx = savedEspresso.getContext('2d');
-        savedEspCtx.drawImage(espressoCanvas, 0, 0);
-        
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(function() {
-            // Resize all canvases (this clears them)
-            resizeCanvases();
-            
-            // Restore espresso base scaled to new size
-            espCtx.drawImage(savedEspresso, 0, 0, W, H);
-            
-            // Restore milk layer scaled to new size
-            milkCtx.drawImage(savedMilk, 0, 0, W, H);
-            
-            // Redraw guide
-            drawGuide();
-        }
-    }                           
-        
-    function resizeCanvases() {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(function() {
-            var stack = document.getElementById('canvasStack');
-            if (!stack) return;
-            var rect = stack.getBoundingClientRect();
-            W = Math.floor(rect.width);
-            H = Math.floor(rect.height);
+        window.addEventListener('resize', function() {
+            var savedMilk = document.createElement('canvas');
+            savedMilk.width = W;
+            savedMilk.height = H;
+            var savedMilkCtx = savedMilk.getContext('2d');
+            if (milkCanvas && milkCanvas.width > 0) savedMilkCtx.drawImage(milkCanvas, 0, 0);
 
-            [espressoCanvas, milkCanvas, guideCanvas, outputCanvas].forEach(function(c) {
-                if (c) { c.width = W; c.height = H; }
-            });
-
-            undoScreen.width = W;
-            undoScreen.height = H;
-            
-            drawEspressoBase();
-            drawGuide();
-        }, 150);
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(function() {
+                resizeCanvases();
+                drawEspressoBase();
+                if (savedMilk.width > 0 && W > 0) milkCtx.drawImage(savedMilk, 0, 0, W, H);
+                drawGuide();
+            }, 200);
+        });
     }
+
+    function resizeCanvases() {
+        var stack = document.getElementById('canvasStack');
+        if (!stack) return;
+        var rect = stack.getBoundingClientRect();
+        W = Math.floor(rect.width) || 184;
+        H = Math.floor(rect.height) || 184;
+
+        [espressoCanvas, milkCanvas, guideCanvas, outputCanvas].forEach(function(c) {
+            if (c) { c.width = W; c.height = H; }
+        });
+        undoScreen.width = W;
+        undoScreen.height = H;
+    }
+
     // ===== ESPRESSO BASE =====
     function drawEspressoBase() {
-        if (!espCtx || W === 0) return;
-        var cx = W/2, cy = H/2;
-
-        var bg = espCtx.createRadialGradient(cx, cy*0.8, 0, cx, cy, Math.max(W,H)*0.7);
+        if (!espCtx || W === 0 || H === 0) return;
+        var cx = W / 2, cy = H / 2;
+        var bg = espCtx.createRadialGradient(cx, cy * 0.8, 0, cx, cy, Math.max(W, H) * 0.7);
         bg.addColorStop(0, '#5C3018');
         bg.addColorStop(0.4, '#3C1F0F');
         bg.addColorStop(1, '#1A0D06');
         espCtx.fillStyle = bg;
         espCtx.fillRect(0, 0, W, H);
 
-        var crema = espCtx.createRadialGradient(cx, cy, W*0.15, cx, cy, W*0.48);
+        var crema = espCtx.createRadialGradient(cx, cy, W * 0.15, cx, cy, W * 0.48);
         crema.addColorStop(0, 'rgba(180,110,40,0)');
         crema.addColorStop(0.6, 'rgba(180,110,40,0.08)');
         crema.addColorStop(0.85, 'rgba(200,130,50,0.15)');
         crema.addColorStop(1, 'rgba(140,80,30,0.25)');
         espCtx.fillStyle = crema;
         espCtx.fillRect(0, 0, W, H);
-
-        espCtx.globalAlpha = 0.04;
-        for (var i = 0; i < 60; i++) {
-            var tx = Math.random()*W, ty = Math.random()*H;
-            espCtx.beginPath();
-            espCtx.arc(tx, ty, Math.random()*2+0.5, 0, Math.PI*2);
-            espCtx.fillStyle = 'rgba(220,180,120,'+(Math.random()*0.5+0.2)+')';
-            espCtx.fill();
-        }
-        espCtx.globalAlpha = 1;
     }
 
     // ===== SOFT MILK BRUSH =====
@@ -183,38 +153,38 @@ var Studio = (function() {
         var soft = softness / 10;
         var edgeStart = 1 - soft * 0.7;
         var g = ctx.createRadialGradient(x, y, 0, x, y, radius);
-        g.addColorStop(0, 'rgba(248,235,218,'+(flow*0.18)+')');
-        g.addColorStop(edgeStart*0.4, 'rgba(240,222,198,'+(flow*0.14)+')');
-        g.addColorStop(edgeStart, 'rgba(230,208,180,'+(flow*0.07)+')');
+        g.addColorStop(0, 'rgba(248,235,218,' + (flow * 0.18) + ')');
+        g.addColorStop(edgeStart * 0.4, 'rgba(240,222,198,' + (flow * 0.14) + ')');
+        g.addColorStop(edgeStart, 'rgba(230,208,180,' + (flow * 0.07) + ')');
         g.addColorStop(1, 'rgba(215,190,160,0)');
         ctx.fillStyle = g;
         ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI*2);
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
         ctx.fill();
 
         if (flow > 0.4) {
-            var hl = ctx.createRadialGradient(x-radius*0.2, y-radius*0.2, 0, x, y, radius*0.3);
-            hl.addColorStop(0, 'rgba(255,250,240,'+(flow*0.1)+')');
+            var hl = ctx.createRadialGradient(x - radius * 0.2, y - radius * 0.2, 0, x, y, radius * 0.3);
+            hl.addColorStop(0, 'rgba(255,250,240,' + (flow * 0.1) + ')');
             hl.addColorStop(1, 'rgba(255,250,240,0)');
             ctx.fillStyle = hl;
             ctx.beginPath();
-            ctx.arc(x, y, radius*0.3, 0, Math.PI*2);
+            ctx.arc(x, y, radius * 0.3, 0, Math.PI * 2);
             ctx.fill();
         }
     }
 
     function lerpStroke(x1, y1, x2, y2, radius, flow, softness) {
-        var dx = x2-x1, dy = y2-y1;
-        var dist = Math.sqrt(dx*dx+dy*dy);
-        var step = Math.max(2, radius*0.3);
-        var steps = Math.ceil(dist/step);
+        var dx = x2 - x1, dy = y2 - y1;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        var step = Math.max(2, radius * 0.3);
+        var steps = Math.ceil(dist / step);
         for (var i = 0; i <= steps; i++) {
-            var t = i/Math.max(steps,1);
-            drawSoftStroke(milkCtx, x1+dx*t, y1+dy*t, radius, flow, softness);
+            var t = i / Math.max(steps, 1);
+            drawSoftStroke(milkCtx, x1 + dx * t, y1 + dy * t, radius, flow, softness);
         }
     }
 
-    // ===== SNAPSHOT (GPU-friendly, no getImageData) =====
+    // ===== SNAPSHOT =====
     function saveUndoSnapshot() {
         undoCtx.clearRect(0, 0, W, H);
         undoCtx.drawImage(milkCanvas, 0, 0);
@@ -224,63 +194,40 @@ var Studio = (function() {
         return undoScreen.toDataURL('image/webp', 0.5);
     }
 
-    function restoreSnapshot(dataUrl, callback) {
-        undoLoading = true;
-        var img = new Image();
-        img.onload = function() {
-            milkCtx.clearRect(0, 0, W, H);
-            milkCtx.drawImage(img, 0, 0);
-            undoLoading = false;
-            if (callback) callback();
-        };
-        img.onerror = function() {
-            undoLoading = false;
-            if (callback) callback();
-        };
-        img.src = dataUrl;
-    }
-
     // ===== INPUT =====
     function getPointerPos(e, canvas) {
         var rect = canvas.getBoundingClientRect();
-        var scaleX = canvas.width/rect.width;
-        var scaleY = canvas.height/rect.height;
+        var scaleX = canvas.width / rect.width;
+        var scaleY = canvas.height / rect.height;
         if (e.touches && e.touches.length > 0) {
-            return { x: (e.touches[0].clientX-rect.left)*scaleX, y: (e.touches[0].clientY-rect.top)*scaleY };
+            return { x: (e.touches[0].clientX - rect.left) * scaleX, y: (e.touches[0].clientY - rect.top) * scaleY };
         }
-        return { x: (e.clientX-rect.left)*scaleX, y: (e.clientY-rect.top)*scaleY };
+        return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
     }
 
     function startPour(e) {
-    e.preventDefault();
-    
-    // Check access for freestyle mode
-    if (currentMode === 'freestyle') {
-        if (typeof SIT !== 'undefined' && !SIT.canFreestyle()) {
-            SIT.showUpgrade();
-            return;
+        e.preventDefault();
+        if (currentMode === 'freestyle') {
+            if (typeof SIT !== 'undefined' && !SIT.canFreestyle()) { SIT.showUpgrade(); return; }
+            if (typeof SIT !== 'undefined') SIT.useFreestyleCredit();
         }
-        if (typeof SIT !== 'undefined') SIT.useFreestyleCredit();
+        saveUndoSnapshot();
+        isPouring = true;
+        var pos = getPointerPos(e, milkCanvas);
+        lastX = pos.x; lastY = pos.y;
+        currentStroke = [{ x: lastX, y: lastY }];
+        var hint = document.getElementById('pourHint'); if (hint) hint.classList.add('hidden');
+        var r = getBrushRadius(), f = getFlow(), s = getSoftness();
+        drawSoftStroke(milkCtx, lastX, lastY, r, f, s);
     }
-    
-    saveUndoSnapshot();
-    isPouring = true;
-    var pos = getPointerPos(e, milkCanvas);
-    lastX = pos.x; lastY = pos.y;
-    currentStroke = [{x:lastX, y:lastY}];
-    var hint = document.getElementById('pourHint');
-    if (hint) hint.classList.add('hidden');
-    var r = getBrushRadius(), f = getFlow(), s = getSoftness();
-    drawSoftStroke(milkCtx, lastX, lastY, r, f, s);
-}
-    
+
     function continuePour(e) {
         if (!isPouring) return;
         e.preventDefault();
         var pos = getPointerPos(e, milkCanvas);
         var r = getBrushRadius(), f = getFlow(), s = getSoftness();
         lerpStroke(lastX, lastY, pos.x, pos.y, r, f, s);
-        currentStroke.push({x:pos.x, y:pos.y});
+        currentStroke.push({ x: pos.x, y: pos.y });
         lastX = pos.x; lastY = pos.y;
     }
 
@@ -288,15 +235,10 @@ var Studio = (function() {
         if (!isPouring) return;
         isPouring = false;
         strokeCount++;
-
-        // Store snapshot as compressed string
         var snapshot = getSnapshotString();
         allStrokes.push(snapshot);
         if (allStrokes.length > MAX_UNDO) allStrokes.shift();
-
-        var sc = document.getElementById('strokeCount');
-        if (sc) sc.textContent = strokeCount;
-
+        var sc = document.getElementById('strokeCount'); if (sc) sc.textContent = strokeCount;
         addStrokeHistoryItem();
         if (currentMode === 'guided') advanceGuideStep();
     }
@@ -307,495 +249,305 @@ var Studio = (function() {
         milkCanvas.addEventListener('mousemove', continuePour);
         milkCanvas.addEventListener('mouseup', endPour);
         milkCanvas.addEventListener('mouseleave', endPour);
-        milkCanvas.addEventListener('touchstart', startPour, {passive:false});
-        milkCanvas.addEventListener('touchmove', continuePour, {passive:false});
+        milkCanvas.addEventListener('touchstart', startPour, { passive: false });
+        milkCanvas.addEventListener('touchmove', continuePour, { passive: false });
         milkCanvas.addEventListener('touchend', endPour);
         milkCanvas.addEventListener('touchcancel', endPour);
     }
 
     // ===== CONTROLS =====
-    function getBrushRadius() {
-        var bs = document.getElementById('brushSize');
-        return (bs ? parseInt(bs.value) : 14) * thicknessMult;
-    }
-    function getFlow() {
-        var fr = document.getElementById('flowRate');
-        return (fr ? parseInt(fr.value) : 5) / 10;
-    }
-    function getSoftness() {
-        var sf = document.getElementById('softness');
-        return sf ? parseInt(sf.value) : 7;
-    }
+    function getBrushRadius() { var b = document.getElementById('brushSize'); return (b ? parseInt(b.value) : 14) * thicknessMult; }
+    function getFlow() { var f = document.getElementById('flowRate'); return (f ? parseInt(f.value) : 5) / 10; }
+    function getSoftness() { var s = document.getElementById('softness'); return s ? parseInt(s.value) : 7; }
 
-    function updateBrushLabel() {
-        var bs = document.getElementById('brushSize');
-        var bv = document.getElementById('brushVal');
-        if (bs && bv) bv.textContent = bs.value;
-    }
-    function updateFlowLabel() {
-        var fr = document.getElementById('flowRate');
-        var fv = document.getElementById('flowVal');
-        if (fr && fv) fv.textContent = fr.value;
-    }
-    function updateSoftLabel() {
-        var sf = document.getElementById('softness');
-        var sv = document.getElementById('softVal');
-        if (sf && sv) sv.textContent = sf.value;
-    }
+    function updateBrushLabel() { var b = document.getElementById('brushSize'), v = document.getElementById('brushVal'); if (b && v) v.textContent = b.value; }
+    function updateFlowLabel() { var f = document.getElementById('flowRate'), v = document.getElementById('flowVal'); if (f && v) v.textContent = f.value; }
+    function updateSoftLabel() { var s = document.getElementById('softness'), v = document.getElementById('softVal'); if (s && v) v.textContent = s.value; }
 
     function setThickness(type, btn) {
         thicknessMult = thicknessMap[type] || 1.0;
-        document.querySelectorAll('.thick-btn').forEach(function(b){b.classList.remove('active');});
+        document.querySelectorAll('.thick-btn').forEach(function(b) { b.classList.remove('active'); });
         if (btn) btn.classList.add('active');
     }
 
     function setMode(mode, btnElement) {
         currentMode = mode;
-        document.querySelectorAll('.mode-btn').forEach(function(b){b.classList.remove('active');});
-        // Use the passed button element or find by mode text
-        if (btnElement) {
-            btnElement.classList.add('active');
-        } else {
-            document.querySelectorAll('.mode-btn').forEach(function(b) {
-                if (b.textContent.toLowerCase().indexOf(mode) !== -1) b.classList.add('active');
-            });
-        }
-        var ml = document.getElementById('modeLabel');
-        if (ml) ml.textContent = mode.charAt(0).toUpperCase()+mode.slice(1);
-        var guideSec = document.getElementById('guidedStepsSection');
-        if (guideSec) guideSec.style.opacity = mode==='guided'?'1':'0.3';
-        if (mode==='guided') drawGuide();
-        else if (guideCtx) guideCtx.clearRect(0,0,W,H);
+        document.querySelectorAll('.mode-btn').forEach(function(b) { b.classList.remove('active'); });
+        if (btnElement) btnElement.classList.add('active');
+        var ml = document.getElementById('modeLabel'); if (ml) ml.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+        var gs = document.getElementById('guidedStepsSection'); if (gs) gs.style.opacity = mode === 'guided' ? '1' : '0.3';
+        if (mode === 'guided') drawGuide(); else if (guideCtx) guideCtx.clearRect(0, 0, W, H);
     }
 
     // ===== TILT =====
-function tiltCup(dir) {
-    tiltAngle = Math.max(-15, Math.min(15, tiltAngle + dir * 5));
-    var wrapper = document.getElementById('cupTiltWrapper');
-    if (wrapper) wrapper.style.transform = 'translateX(-50%) rotate(' + tiltAngle + 'deg)';
-    var indicator = document.getElementById('tiltIndicator');
-    if (indicator) indicator.style.transform = 'rotate(' + tiltAngle + 'deg)';
-    var label = tiltAngle === 0 ? 'Level' : (tiltAngle < 0 ? Math.abs(tiltAngle) + '° Left' : tiltAngle + '° Right');
-    var tl = document.getElementById('tiltLabel');
-    if (tl) tl.textContent = label;
-}
-       // ===== UNDO (fixed async ordering) =====
-    var undoQueue = [];
-    var isRestoring = false;
+    function tiltCup(dir) {
+        tiltAngle = Math.max(-15, Math.min(15, tiltAngle + dir * 5));
+        var wrapper = document.getElementById('cupTiltWrapper');
+        if (wrapper) wrapper.style.transform = 'translateX(-50%) rotate(' + tiltAngle + 'deg)';
+        var indicator = document.getElementById('tiltIndicator');
+        if (indicator) indicator.style.transform = 'rotate(' + tiltAngle + 'deg)';
+        var label = tiltAngle === 0 ? 'Level' : (tiltAngle < 0 ? Math.abs(tiltAngle) + '° Left' : tiltAngle + '° Right');
+        var tl = document.getElementById('tiltLabel'); if (tl) tl.textContent = label;
+    }
 
+    // ===== UNDO =====
     function processUndoQueue() {
-        if (undoQueue.length === 0) { 
-            isRestoring = false; 
-            return; 
-        }
+        if (undoQueue.length === 0) { isRestoring = false; return; }
         isRestoring = true;
         var snapshot = undoQueue.shift();
         var img = new Image();
-        img.onload = function() {
-            milkCtx.clearRect(0, 0, W, H);
-            milkCtx.drawImage(img, 0, 0);
-            processUndoQueue();
-        };
-        img.onerror = function() { 
-            processUndoQueue(); 
-        };
+        img.onload = function() { milkCtx.clearRect(0, 0, W, H); milkCtx.drawImage(img, 0, 0); processUndoQueue(); };
+        img.onerror = function() { processUndoQueue(); };
         img.src = snapshot;
     }
 
     function undoStroke() {
-        if (isRestoring) return; // Block rapid undo while restoring
+        if (isRestoring) return;
         if (allStrokes.length === 0) {
             milkCtx.clearRect(0, 0, W, H);
             strokeCount = 0;
-            var sc = document.getElementById('strokeCount'); 
-            if (sc) sc.textContent = 0;
+            var sc = document.getElementById('strokeCount'); if (sc) sc.textContent = 0;
             resetStrokeHistory();
-            if (currentMode === 'guided') { 
-                currentStep = 0; 
-                updateGuideSteps(); 
-            }
+            if (currentMode === 'guided') { currentStep = 0; updateGuideSteps(); }
             return;
         }
-
         allStrokes.pop();
         strokeCount = Math.max(0, strokeCount - 1);
-        var sc = document.getElementById('strokeCount'); 
-        if (sc) sc.textContent = strokeCount;
+        var sc = document.getElementById('strokeCount'); if (sc) sc.textContent = strokeCount;
         removeLastStrokeHistoryItem();
-
-        if (allStrokes.length > 0) {
-            // Queue the restore to prevent race conditions
-            undoQueue.push(allStrokes[allStrokes.length - 1]);
-            if (!isRestoring) processUndoQueue();
-        } else {
-            milkCtx.clearRect(0, 0, W, H);
-        }
-
-        if (currentMode === 'guided' && currentStep > 0) { 
-            currentStep--; 
-            updateGuideSteps(); 
-        }
+        if (allStrokes.length > 0) { undoQueue.push(allStrokes[allStrokes.length - 1]); if (!isRestoring) processUndoQueue(); }
+        else { milkCtx.clearRect(0, 0, W, H); }
+        if (currentMode === 'guided' && currentStep > 0) { currentStep--; updateGuideSteps(); }
     }
+
     function clearCanvas() {
-        milkCtx.clearRect(0,0,W,H);
-        allStrokes = [];
-        strokeCount = 0;
-        currentStep = 0;
+        milkCtx.clearRect(0, 0, W, H);
+        allStrokes = []; strokeCount = 0; currentStep = 0;
         var sc = document.getElementById('strokeCount'); if (sc) sc.textContent = 0;
         var ph = document.getElementById('pourHint'); if (ph) ph.classList.remove('hidden');
         var sb = document.getElementById('scoreBadge'); if (sb) sb.classList.remove('visible');
-        resetStrokeHistory();
-        updateGuideSteps();
-        if (currentMode==='guided') drawGuide();
+        resetStrokeHistory(); updateGuideSteps();
+        if (currentMode === 'guided') drawGuide();
     }
 
-        // ===== SCORE (real analysis) =====
+    // ===== SCORE =====
     function scoreCanvas() {
         if (strokeCount === 0) return;
-        
-        // Create temp canvas for scoring
         var tempCanvas = document.createElement('canvas');
-        tempCanvas.width = W;
-        tempCanvas.height = H;
+        tempCanvas.width = W; tempCanvas.height = H;
         var tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
-        
-        // Composite the layers
         tempCtx.drawImage(espressoCanvas, 0, 0);
         tempCtx.drawImage(milkCanvas, 0, 0);
-        
-        // Get center of cup
+
         var cx = W / 2, cy = H / 2, cupR = Math.min(W, H) / 2 - 10;
-        
-        // Sample points for analysis
-        var sampleSize = 15;
-        var milkPixels = 0, totalPixels = 0;
-        var leftMilk = 0, rightMilk = 0;
-        var centerMilk = 0, edgeMilk = 0;
-        var topMilk = 0, bottomMilk = 0;
-        
+        var sampleSize = 15, milkPixels = 0, totalPixels = 0, leftMilk = 0, rightMilk = 0, centerMilk = 0, topMilk = 0, bottomMilk = 0;
+
         for (var sx = 0; sx < W; sx += sampleSize) {
             for (var sy = 0; sy < H; sy += sampleSize) {
-                var dist = Math.sqrt((sx - cx) * (sx - cx) + (sy - cy) * (sy - cy));
-                if (dist > cupR) continue; // Outside cup
-                
+                if (Math.sqrt((sx - cx) ** 2 + (sy - cy) ** 2) > cupR) continue;
                 totalPixels++;
                 try {
                     var px = tempCtx.getImageData(sx, sy, 1, 1).data;
-                    var isMilk = (px[0] > 180 && px[1] > 160 && px[2] > 130 && px[3] > 30);
-                    
-                    if (isMilk) {
+                    if (px[0] > 180 && px[1] > 160 && px[2] > 130 && px[3] > 30) {
                         milkPixels++;
-                        if (sx < cx) leftMilk++;
-                        else rightMilk++;
-                        if (dist < cupR * 0.4) centerMilk++;
-                        else edgeMilk++;
-                        if (sy < cy) topMilk++;
-                        else bottomMilk++;
+                        if (sx < cx) leftMilk++; else rightMilk++;
+                        if (Math.sqrt((sx - cx) ** 2 + (sy - cy) ** 2) < cupR * 0.4) centerMilk++;
+                        if (sy < cy) topMilk++; else bottomMilk++;
                     }
-                } catch(e) { /* skip */ }
+                } catch (e) {}
             }
         }
-        
         if (totalPixels === 0) return;
-        
-        // Calculate metrics
+
         var coverage = Math.min(1, milkPixels / totalPixels);
         var symmetry = Math.max(0, 1 - Math.abs(leftMilk - rightMilk) / Math.max(1, milkPixels));
         var centering = Math.max(0, centerMilk / Math.max(1, milkPixels));
         var balance = Math.max(0, 1 - Math.abs(topMilk - bottomMilk) / Math.max(1, milkPixels));
-        
-        // Convert to scores (1-10 scale)
-        var coverageScore = Math.min(10, Math.round(coverage * 10));
-        var symmetryScore = Math.min(10, Math.round(symmetry * 10));
-        var centeringScore = Math.min(10, Math.round(centering * 15));
-        var balanceScore = Math.min(10, Math.round(balance * 10));
+
+        var covScore = Math.min(10, Math.round(coverage * 10));
+        var symScore = Math.min(10, Math.round(symmetry * 10));
+        var cenScore = Math.min(10, Math.round(centering * 15));
+        var balScore = Math.min(10, Math.round(balance * 10));
         var strokeBonus = Math.min(2, Math.floor(strokeCount / 5));
-        
-        var overall = Math.min(10, Math.round(
-            (coverageScore * 0.3 + symmetryScore * 0.3 + centeringScore * 0.2 + balanceScore * 0.2) + strokeBonus
-        ));
+        var overall = Math.min(10, Math.round((covScore * 0.3 + symScore * 0.3 + cenScore * 0.2 + balScore * 0.2) + strokeBonus));
         var overallDecimal = (overall / 10).toFixed(1);
-        
-        // Display score
-        var sv = document.getElementById('scoreValue');
-        if (sv) sv.textContent = overallDecimal;
-        
-        var sb = document.getElementById('scoreBadge');
-        if (sb) sb.classList.add('visible');
-        
-        setTimeout(function() {
-            var sb2 = document.getElementById('scoreBadge');
-            if (sb2) sb2.classList.remove('visible');
-        }, 4000);
-        
-        // Also update SIT state
-        if (typeof SIT !== 'undefined') {
-            var state = SIT.getState();
-            if (state && overallDecimal > state.bestScore) {
-                state.bestScore = parseFloat(overallDecimal);
-                localStorage.setItem('sit_bestScore', state.bestScore);
-            }
-        }
-        
-        // Show detailed overlay
-        showDetailedScore(coverageScore, symmetryScore, centeringScore, balanceScore, overallDecimal);
-    }
-    
-    function showDetailedScore(cov, sym, cen, bal, overall) {
+
+        var sv = document.getElementById('scoreValue'); if (sv) sv.textContent = overallDecimal;
+        var sb = document.getElementById('scoreBadge'); if (sb) sb.classList.add('visible');
+        setTimeout(function() { var s = document.getElementById('scoreBadge'); if (s) s.classList.remove('visible'); }, 4000);
+
+        if (typeof SIT !== 'undefined') { var st = SIT.getState(); if (st && overallDecimal > st.bestScore) { st.bestScore = parseFloat(overallDecimal);
+                localStorage.setItem('sit_bestScore', st.bestScore); } }
+
         var so = document.getElementById('scoreOverlay');
-        if (!so) return;
-        so.classList.add('active');
-        so.style.display = 'flex';
-        
-        var sn = document.getElementById('scoreNumber');
-        if (sn) sn.textContent = overall;
-        
-        var se = document.getElementById('scoreEmoji');
-        if (se) se.textContent = overall >= 8 ? '🌟' : overall >= 6 ? '👍' : '💪';
-        
+        if (so) { so.classList.add('active');
+            so.style.display = 'flex'; }
+        var sn = document.getElementById('scoreNumber'); if (sn) sn.textContent = overallDecimal;
+        var se = document.getElementById('scoreEmoji'); if (se) se.textContent = overall >= 8 ? '🌟' : overall >= 6 ? '👍' : '💪';
         var sd = document.getElementById('scoreDetail');
         if (sd) sd.innerHTML =
-            '<div><div class="score-m-label">Coverage</div><div class="score-m-bar"><div class="score-m-fill" style="width:' + (cov * 10) + '%"></div></div></div>' +
-            '<div><div class="score-m-label">Symmetry</div><div class="score-m-bar"><div class="score-m-fill" style="width:' + (sym * 10) + '%"></div></div></div>' +
-            '<div><div class="score-m-label">Centering</div><div class="score-m-bar"><div class="score-m-fill" style="width:' + (cen * 10) + '%"></div></div></div>' +
-            '<div><div class="score-m-label">Balance</div><div class="score-m-bar"><div class="score-m-fill" style="width:' + (bal * 10) + '%"></div></div></div>';
-        
+            '<div><div class="score-m-label">Coverage</div><div class="score-m-bar"><div class="score-m-fill" style="width:' + (covScore * 10) + '%"></div></div></div>' +
+            '<div><div class="score-m-label">Symmetry</div><div class="score-m-bar"><div class="score-m-fill" style="width:' + (symScore * 10) + '%"></div></div></div>' +
+            '<div><div class="score-m-label">Centering</div><div class="score-m-bar"><div class="score-m-fill" style="width:' + (cenScore * 10) + '%"></div></div></div>' +
+            '<div><div class="score-m-label">Balance</div><div class="score-m-bar"><div class="score-m-fill" style="width:' + (balScore * 10) + '%"></div></div></div>';
         var tips = [];
-        if (cov < 5) tips.push('Pour more milk to cover the surface.');
-        if (sym < 5) tips.push('Try to mirror your left and right movements.');
-        if (cen < 5) tips.push('Keep your pour centered in the cup.');
-        if (bal < 5) tips.push('Balance your pour between top and bottom.');
+        if (covScore < 5) tips.push('Pour more milk to cover the surface.');
+        if (symScore < 5) tips.push('Try to mirror your left and right movements.');
+        if (cenScore < 5) tips.push('Keep your pour centered in the cup.');
+        if (balScore < 5) tips.push('Balance your pour between top and bottom.');
         if (tips.length === 0) tips.push('Great pour! Try a more complex pattern.');
-        
-        var st = document.getElementById('scoreTip');
-        if (st) st.textContent = tips[Math.floor(Math.random() * tips.length)];
+        var st = document.getElementById('scoreTip'); if (st) st.textContent = tips[Math.floor(Math.random() * tips.length)];
     }
-    
+
     // ===== DOWNLOAD =====
     function downloadCanvas() {
         if (!outCtx || !espressoCanvas || !milkCanvas) return;
-        outCtx.clearRect(0,0,W,H);
-        outCtx.drawImage(espressoCanvas,0,0);
-        outCtx.drawImage(milkCanvas,0,0);
+        outCtx.clearRect(0, 0, W, H);
+        outCtx.drawImage(espressoCanvas, 0, 0);
+        outCtx.drawImage(milkCanvas, 0, 0);
         var link = document.createElement('a');
-        link.download = 'sit-pour-'+Date.now()+'.png';
+        link.download = 'sit-pour-' + Date.now() + '.png';
         link.href = outputCanvas.toDataURL('image/png');
         link.click();
     }
 
     // ===== GUIDE OVERLAY =====
     function drawGuide() {
-        if (!guideCtx || W===0) return;
-        guideCtx.clearRect(0,0,W,H);
-        if (currentMode!=='guided') return;
-        var pattern = patterns.find(function(p){return p.id===currentPattern;});
+        if (!guideCtx || W === 0) return;
+        guideCtx.clearRect(0, 0, W, H);
+        if (currentMode !== 'guided') return;
+        var pattern = patterns.find(function(p) { return p.id === currentPattern; });
         if (!pattern || !pattern.guide.length) return;
-
-        guideCtx.setLineDash([3,5]);
+        guideCtx.setLineDash([3, 5]);
         guideCtx.lineWidth = 1.5;
         guideCtx.strokeStyle = 'rgba(200,133,58,0.5)';
         guideCtx.fillStyle = 'rgba(200,133,58,0.06)';
-
         pattern.guide.forEach(function(shape) {
-            if (shape.type==='circle') {
-                guideCtx.beginPath();
-                guideCtx.arc(shape.cx*W, shape.cy*H, shape.r*W, 0, Math.PI*2);
+            if (shape.type === 'circle') { guideCtx.beginPath();
+                guideCtx.arc(shape.cx * W, shape.cy * H, shape.r * W, 0, Math.PI * 2);
                 guideCtx.fill();
-                guideCtx.stroke();
-            } else if (shape.type==='path') {
-                guideCtx.beginPath();
-                shape.points.forEach(function(p, i) {
-                    if (i===0) guideCtx.moveTo(p[0]*W, p[1]*H);
-                    else guideCtx.lineTo(p[0]*W, p[1]*H);
-                });
-                guideCtx.stroke();
-            }
+                guideCtx.stroke(); } else if (shape.type === 'path') { guideCtx.beginPath();
+                shape.points.forEach(function(p, i) { i === 0 ? guideCtx.moveTo(p[0] * W, p[1] * H) : guideCtx.lineTo(p[0] * W, p[1] * H); });
+                guideCtx.stroke(); }
         });
         guideCtx.setLineDash([]);
-        drawStepArrow();
+        var guide = pattern.guide[currentStep]; if (guide) { var ax, ay; if (guide.type === 'circle') { ax = guide.cx * W;
+                ay = guide.cy * H - guide.r * W - 12; } else if (guide.type === 'path' && guide.points.length) { ax = guide.points[0][0] * W;
+                ay = guide.points[0][1] * H - 14; } if (ax !== undefined) { var pulse = Math.sin(ghostFrame * 0.05) * 3;
+                guideCtx.fillStyle = 'rgba(200,133,58,0.9)';
+                guideCtx.font = '14px serif';
+                guideCtx.textAlign = 'center';
+                guideCtx.fillText('↓', ax, ay + pulse); } }
     }
 
-    function drawStepArrow() {
-        var pattern = patterns.find(function(p){return p.id===currentPattern;});
-        if (!pattern) return;
-        var guide = pattern.guide[currentStep];
-        if (!guide) return;
-        var ax, ay;
-        if (guide.type==='circle') { ax=guide.cx*W; ay=guide.cy*H-guide.r*W-12; }
-        else if (guide.type==='path' && guide.points.length) { ax=guide.points[0][0]*W; ay=guide.points[0][1]*H-14; }
-        if (ax===undefined) return;
-        var pulse = Math.sin(ghostFrame*0.05)*3;
-        guideCtx.fillStyle = 'rgba(200,133,58,0.9)';
-        guideCtx.font = '14px serif';
-        guideCtx.textAlign = 'center';
-        guideCtx.fillText('↓', ax, ay+pulse);
-    }
-    function filterPatterns(cat, btnElement) {
-        document.querySelectorAll('.pattern-tab').forEach(function(b) {
-            b.classList.remove('active');
-        });
-        if (btnElement) btnElement.classList.add('active');
-        
-        var grid = document.getElementById('patternGrid');
-        if (!grid) return;
+    function startGhostAnimation() { stopGhostAnimation();
+        function anim() { ghostFrame++;
+            drawGuide();
+            ghostAnimId = requestAnimationFrame(anim); }
+        ghostAnimId = requestAnimationFrame(anim); }
+
+    function stopGhostAnimation() { if (ghostAnimId) { cancelAnimationFrame(ghostAnimId);
+            ghostAnimId = null; } }
+
+    // ===== GUIDED STEPS =====
+    function buildGuideSteps() { var pattern = patterns.find(function(p) { return p.id === currentPattern; }); if (!pattern) return; var container = document.getElementById('guideSteps'); if (!container) return;
+        container.innerHTML = '';
+        pattern.steps.forEach(function(step, i) { var div = document.createElement('div');
+            div.className = 'guide-step' + (i === 0 ? ' active' : '');
+            div.innerHTML = '<div class="step-num">' + (i + 1) + '</div><span>' + step + '</span>';
+            container.appendChild(div); }); }
+
+    function updateGuideSteps() { var steps = document.querySelectorAll('.guide-step');
+        steps.forEach(function(el, i) { el.className = 'guide-step' + (i < currentStep ? ' done' : '') + (i === currentStep ? ' active' : ''); });
+        drawGuide(); }
+
+    function advanceGuideStep() { var pattern = patterns.find(function(p) { return p.id === currentPattern; }); if (!pattern) return; if (currentStep < pattern.steps.length - 1) { currentStep++;
+            updateGuideSteps(); } }
+
+    // ===== PATTERN CARDS =====
+    function buildPatternGrid() { var grid = document.getElementById('patternGrid'); if (!grid) return;
         grid.innerHTML = '';
-        
-        var filtered = cat === 'all' ? patterns : patterns.filter(function(p) {
-            return p.cat === cat;
-        });
-        
-        filtered.forEach(function(p) {
-            var card = document.createElement('div');
+        patterns.forEach(function(p) { var card = document.createElement('div');
             card.className = 'pattern-card' + (p.id === currentPattern ? ' active' : '');
-            card.addEventListener('click', function() { selectPattern(p.id, this); });
-            
-            var mini = document.createElement('canvas');
-            mini.width = 40; mini.height = 40;
-            var mctx = mini.getContext('2d');
-            var bg = mctx.createRadialGradient(20, 20, 0, 20, 20, 20);
+            card.addEventListener('click', function() { selectPattern(p.id, this); }); var mini = document.createElement('canvas');
+            mini.width = 40;
+            mini.height = 40; var mctx = mini.getContext('2d'); var bg = mctx.createRadialGradient(20, 20, 0, 20, 20, 20);
             bg.addColorStop(0, '#5C3018');
             bg.addColorStop(1, '#1A0D06');
             mctx.fillStyle = bg;
             mctx.beginPath();
             mctx.arc(20, 20, 20, 0, Math.PI * 2);
             mctx.fill();
-            
             mctx.strokeStyle = p.color;
             mctx.lineWidth = 1;
             mctx.setLineDash([2, 3]);
             mctx.globalAlpha = 0.6;
-            p.guide.forEach(function(s) {
-                if (s.type === 'circle') {
-                    mctx.beginPath();
+            p.guide.forEach(function(s) { if (s.type === 'circle') { mctx.beginPath();
                     mctx.arc(s.cx * 40, s.cy * 40, s.r * 40, 0, Math.PI * 2);
-                    mctx.stroke();
-                } else if (s.type === 'path') {
-                    mctx.beginPath();
-                    s.points.forEach(function(pt, i) {
-                        if (i === 0) mctx.moveTo(pt[0] * 40, pt[1] * 40);
-                        else mctx.lineTo(pt[0] * 40, pt[1] * 40);
-                    });
-                    mctx.stroke();
-                }
-            });
-            mctx.globalAlpha = 1;
-            
-            var dots = document.createElement('div');
-            dots.className = 'pattern-difficulty';
-            for (var i = 0; i < 5; i++) {
-                var d = document.createElement('div');
+                    mctx.stroke(); } else if (s.type === 'path') { mctx.beginPath();
+                    s.points.forEach(function(pt, i) { i === 0 ? mctx.moveTo(pt[0] * 40, pt[1] * 40) : mctx.lineTo(pt[0] * 40, pt[1] * 40); });
+                    mctx.stroke(); } });
+            mctx.globalAlpha = 1; var dots = document.createElement('div');
+            dots.className = 'pattern-difficulty'; for (var i = 0; i < 5; i++) { var d = document.createElement('div');
                 d.className = 'diff-dot' + (i < p.difficulty ? ' filled' : '');
-                dots.appendChild(d);
-            }
-            
+                dots.appendChild(d); }
             card.appendChild(mini);
             card.innerHTML += '<div class="pattern-card-label">' + p.name + '</div>';
             card.appendChild(dots);
             card.insertBefore(mini, card.firstChild);
-            grid.appendChild(card);
-        });
-    }    
-    function startGhostAnimation() {
-        stopGhostAnimation();
-        function anim() { ghostFrame++; drawGuide(); ghostAnimId = requestAnimationFrame(anim); }
-        ghostAnimId = requestAnimationFrame(anim);
-    }
+            grid.appendChild(card); }); }
 
-    function stopGhostAnimation() {
-        if (ghostAnimId) { cancelAnimationFrame(ghostAnimId); ghostAnimId = null; }
-    }
+    function selectPattern(id, cardElement) { currentPattern = id;
+        currentStep = 0;
+        document.querySelectorAll('.pattern-card').forEach(function(c) { c.classList.remove('active'); }); if (cardElement) cardElement.classList.add('active'); var pat = patterns.find(function(p) { return p.id === id; }); var pl = document.getElementById('patternLabel'); if (pl) pl.textContent = pat ? pat.name : id;
+        clearCanvas();
+        buildGuideSteps();
+        drawGuide(); }
 
-    // ===== GUIDED STEPS =====
-    function buildGuideSteps() {
-        var pattern = patterns.find(function(p){return p.id===currentPattern;});
-        if (!pattern) return;
-        var container = document.getElementById('guideSteps');
-        if (!container) return;
-        container.innerHTML = '';
-        pattern.steps.forEach(function(step, i) {
-            var div = document.createElement('div');
-            div.className = 'guide-step'+(i===0?' active':'');
-            div.innerHTML = '<div class="step-num">'+(i+1)+'</div><span>'+step+'</span>';
-            container.appendChild(div);
-        });
-    }
-
-    function updateGuideSteps() {
-        var steps = document.querySelectorAll('.guide-step');
-        steps.forEach(function(el, i) {
-            el.className = 'guide-step'+(i<currentStep?' done':'')+(i===currentStep?' active':'');
-        });
-        drawGuide();
-    }
-
-    function advanceGuideStep() {
-        var pattern = patterns.find(function(p){return p.id===currentPattern;});
-        if (!pattern) return;
-        if (currentStep < pattern.steps.length-1) { currentStep++; updateGuideSteps(); }
-    }
-
-    // ===== PATTERN CARDS =====
-    function buildPatternGrid() {
-        var grid = document.getElementById('patternGrid');
-        if (!grid) return;
-        grid.innerHTML = '';
-        patterns.forEach(function(p) {
-            var card = document.createElement('div');
-            card.className = 'pattern-card'+(p.id===currentPattern?' active':'');
-            card.addEventListener('click', function() { selectPattern(p.id, this); });
-            var mini = document.createElement('canvas');
-            mini.width=40; mini.height=40;
-            var mctx=mini.getContext('2d');
-            var bg=mctx.createRadialGradient(20,20,0,20,20,20);
-            bg.addColorStop(0,'#5C3018'); bg.addColorStop(1,'#1A0D06');
-            mctx.fillStyle=bg; mctx.beginPath(); mctx.arc(20,20,20,0,Math.PI*2); mctx.fill();
-            mctx.strokeStyle=p.color; mctx.lineWidth=1; mctx.setLineDash([2,3]); mctx.globalAlpha=0.6;
-            p.guide.forEach(function(s) {
-                if (s.type==='circle') { mctx.beginPath();
-                    mctx.arc(s.cx*40,s.cy*40,s.r*40,0,Math.PI*2); mctx.stroke(); }
-                else if (s.type==='path') { mctx.beginPath();
-                    s.points.forEach(function(pt,i){ if(i===0)mctx.moveTo(pt[0]*40,pt[1]*40); else mctx.lineTo(pt[0]*40,pt[1]*40); });
-                    mctx.stroke(); }
-            });
-            mctx.globalAlpha=1;
-            var dots=document.createElement('div'); dots.className='pattern-difficulty';
-            for (var i=0; i<5; i++) { var d=document.createElement('div');
-                d.className='diff-dot'+(i<p.difficulty?' filled':''); dots.appendChild(d); }
-            card.appendChild(mini); card.innerHTML+='<div class="pattern-card-label">'+p.name+'</div>';
-            card.appendChild(dots); card.insertBefore(mini, card.firstChild);
-            grid.appendChild(card);
-        });
-    }
-
-    function selectPattern(id, cardElement) {
-        currentPattern=id; currentStep=0;
-        document.querySelectorAll('.pattern-card').forEach(function(c){c.classList.remove('active');});
-        if (cardElement) cardElement.classList.add('active');
-        var pat = patterns.find(function(p){return p.id===id;});
-        var pl = document.getElementById('patternLabel'); if (pl) pl.textContent = pat?pat.name:id;
-        clearCanvas(); buildGuideSteps(); drawGuide();
-    }
+    function filterPatterns(cat, btnElement) { document.querySelectorAll('.pattern-tab').forEach(function(b) { b.classList.remove('active'); }); if (btnElement) btnElement.classList.add('active'); var grid = document.getElementById('patternGrid'); if (!grid) return;
+        grid.innerHTML = ''; var filtered = cat === 'all' ? patterns : patterns.filter(function(p) { return p.cat === cat; });
+        filtered.forEach(function(p) { var card = document.createElement('div');
+            card.className = 'pattern-card' + (p.id === currentPattern ? ' active' : '');
+            card.addEventListener('click', function() { selectPattern(p.id, this); }); var mini = document.createElement('canvas');
+            mini.width = 40;
+            mini.height = 40; var mctx = mini.getContext('2d'); var bg = mctx.createRadialGradient(20, 20, 0, 20, 20, 20);
+            bg.addColorStop(0, '#5C3018');
+            bg.addColorStop(1, '#1A0D06');
+            mctx.fillStyle = bg;
+            mctx.beginPath();
+            mctx.arc(20, 20, 20, 0, Math.PI * 2);
+            mctx.fill();
+            mctx.strokeStyle = p.color;
+            mctx.lineWidth = 1;
+            mctx.setLineDash([2, 3]);
+            mctx.globalAlpha = 0.6;
+            p.guide.forEach(function(s) { if (s.type === 'circle') { mctx.beginPath();
+                    mctx.arc(s.cx * 40, s.cy * 40, s.r * 40, 0, Math.PI * 2);
+                    mctx.stroke(); } else if (s.type === 'path') { mctx.beginPath();
+                    s.points.forEach(function(pt, i) { i === 0 ? mctx.moveTo(pt[0] * 40, pt[1] * 40) : mctx.lineTo(pt[0] * 40, pt[1] * 40); });
+                    mctx.stroke(); } });
+            mctx.globalAlpha = 1; var dots = document.createElement('div');
+            dots.className = 'pattern-difficulty'; for (var i = 0; i < 5; i++) { var d = document.createElement('div');
+                d.className = 'diff-dot' + (i < p.difficulty ? ' filled' : '');
+                dots.appendChild(d); }
+            card.appendChild(mini);
+            card.innerHTML += '<div class="pattern-card-label">' + p.name + '</div>';
+            card.appendChild(dots);
+            card.insertBefore(mini, card.firstChild);
+            grid.appendChild(card); }); }
 
     // ===== STROKE HISTORY =====
-    function addStrokeHistoryItem() {
-        var hist=document.getElementById('strokeHistory'); if (!hist) return;
-        var ph=hist.querySelector('div[style]'); if (ph) ph.remove();
-        var item=document.createElement('div'); item.className='stroke-item'; item.id='stroke-'+strokeCount;
-        item.innerHTML='<div class="stroke-dot"></div><span>Stroke '+strokeCount+'</span>';
-        hist.insertBefore(item, hist.firstChild);
-        var items=hist.querySelectorAll('.stroke-item'); if (items.length>6) items[items.length-1].remove();
-    }
+    function addStrokeHistoryItem() { var hist = document.getElementById('strokeHistory'); if (!hist) return; var ph = hist.querySelector('div[style]'); if (ph) ph.remove(); var item = document.createElement('div');
+        item.className = 'stroke-item';
+        item.id = 'stroke-' + strokeCount;
+        item.innerHTML = '<div class="stroke-dot"></div><span>Stroke ' + strokeCount + '</span>';
+        hist.insertBefore(item, hist.firstChild); var items = hist.querySelectorAll('.stroke-item'); if (items.length > 6) items[items.length - 1].remove(); }
 
-    function removeLastStrokeHistoryItem() {
-        var hist=document.getElementById('strokeHistory'); if (!hist) return;
-        var items=hist.querySelectorAll('.stroke-item'); if (items.length>0) items[0].remove();
-        if (hist.querySelectorAll('.stroke-item').length===0) resetStrokeHistory();
-    }
+    function removeLastStrokeHistoryItem() { var hist = document.getElementById('strokeHistory'); if (!hist) return; var items = hist.querySelectorAll('.stroke-item'); if (items.length > 0) items[0].remove(); if (hist.querySelectorAll('.stroke-item').length === 0) resetStrokeHistory(); }
 
-    function resetStrokeHistory() {
-        var hist=document.getElementById('strokeHistory'); if (!hist) return;
-        hist.innerHTML='<div style="font-size:9px;color:var(--text-muted);">No strokes yet</div>';
-    }
+    function resetStrokeHistory() { var hist = document.getElementById('strokeHistory'); if (!hist) return;
+        hist.innerHTML = '<div style="font-size:9px;color:var(--text-muted);">No strokes yet</div>'; }
+
     // ===== PUBLIC API =====
     return {
         init: init,
@@ -811,13 +563,10 @@ function tiltCup(dir) {
         updateSoftLabel: updateSoftLabel,
         filterPatterns: filterPatterns,
         selectPattern: selectPattern,
-        getDataURL: function() { 
-            if (!outCtx || !espressoCanvas || !milkCanvas) return '';
-            outCtx.clearRect(0,0,W,H);
-            outCtx.drawImage(espressoCanvas,0,0);
-            outCtx.drawImage(milkCanvas,0,0);
-            return outputCanvas.toDataURL('image/png');
-        },
+        getDataURL: function() { if (!outCtx || !espressoCanvas || !milkCanvas) return '';
+            outCtx.clearRect(0, 0, W, H);
+            outCtx.drawImage(espressoCanvas, 0, 0);
+            outCtx.drawImage(milkCanvas, 0, 0); return outputCanvas.toDataURL('image/png'); },
         getStrokes: function() { return allStrokes; }
     };
 })();
