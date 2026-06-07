@@ -138,7 +138,7 @@ var SIT = (function() {
         saveState();
         
         activateTrial();
-        
+        updateProUI();
         // Reset login screen
         var heading = document.querySelector('#loginScreen h3');
         if (heading) heading.textContent = 'Welcome Back';
@@ -347,6 +347,7 @@ var SIT = (function() {
         showDashTab('overview');
         document.getElementById('dashboard').classList.add('active');
         showToast('Welcome, ' + state.userName + '! ☕');
+        updateProUI();
     }
 
     function doLogout() {
