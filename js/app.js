@@ -99,16 +99,61 @@ var SIT = (function() {
     }
     
     function startTrial() {
+        // If already logged in, start trial immediately
+        if (state.loggedIn && state.userName) {
+            activateTrial();
+            return;
+        }
+        
+        // Not logged in — show login screen first
+        document.getElementById('loginScreen').classList.add('active');
+        document.getElementById('loginUsername').value = '';
+        document.getElementById('loginPassword').value = '';
+        document.getElementById('loginError').style.display = 'none';
+        
+        // Change the login screen messaging for trial
+        var heading = document.querySelector('#loginScreen h3');
+        if (heading) heading.textContent = 'Start Your Free Trial';
+        
+        var subtext = document.querySelector('#loginScreen p');
+        if (subtext) subtext.textContent = 'Choose a username to begin your 7-day trial.';
+        
+        var loginBtn = document.querySelector('#loginScreen .btn-primary');
+        if (loginBtn) loginBtn.textContent = 'Start Trial';
+        
+        // Override the login button to start trial
+        loginBtn.setAttribute('onclick', 'SIT.startTrialLogin()');
+    }
+    
+    function startTrialLogin() {
+        var un = document.getElementById('loginUsername');
+        if (!un || !un.value.trim()) {
+            var er = document.getElementById('loginError');
+            if (er) { er.textContent = 'Enter a username to start.'; er.style.display = 'block'; }
+            return;
+        }
+        
+        state.userName = un.value.trim();
+        state.loggedIn = true;
+        saveState();
+        
+        activateTrial();
+        
+        // Reset login screen
+        var heading = document.querySelector('#loginScreen h3');
+        if (heading) heading.textContent = 'Welcome Back';
+        var subtext = document.querySelector('#loginScreen p');
+        if (subtext) subtext.textContent = 'Log in to access your studio.';
+        var loginBtn = document.querySelector('#loginScreen .btn-primary');
+        if (loginBtn) { loginBtn.textContent = 'Log In'; loginBtn.setAttribute('onclick', 'SIT.doLogin()'); }
+    }
+    
+    function activateTrial() {
         if (!state.trialStart) {
             state.trialStart = new Date().toISOString();
             state.trialDays = 7;
             localStorage.setItem('sit_trialStart', state.trialStart);
             localStorage.setItem('sit_trial', 7);
-        }
-        if (!state.userName) {
-            state.userName = 'barista_' + Math.floor(Math.random() * 9999);
-            state.loggedIn = true;
-            saveState();
         }
         showToast('7-day trial active! All features unlocked. 🎉');
         if (typeof Academy !== 'undefined' && Academy.populateAcademy) Academy.populateAcademy();
@@ -118,9 +163,9 @@ var SIT = (function() {
         document.getElementById('userAvatar').textContent = state.userName.charAt(0).toUpperCase();
         updateDashboardStats();
         showDashTab('overview');
+        document.getElementById('loginScreen').classList.remove('active');
         document.getElementById('dashboard').classList.add('active');
-    }
-
+    }    
     function showToast(msg) {
         var t = document.getElementById('toast');
         if (!t) { console.log('Toast:', msg); return; }
