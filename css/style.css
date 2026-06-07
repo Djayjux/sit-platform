@@ -166,7 +166,7 @@ section { padding:3rem 1rem; }
 .guide-step.active .step-num { border-color: var(--accent); color: var(--accent); }
 
 /* Canvas Area */
-.canvas-area { display: flex; align-items: center; justify-content: center; background: #E8D5C0; position: relative; overflow: hidden; order: 1; min-height: 400px; }
+.canvas-area { display: flex; align-items: center; justify-content: center; background: #FDFCF9; position: relative; overflow: hidden; order: 1; min-height: 400px; }
 
 /* Cup wrapper — outer container */
 .cup-wrapper { position: relative; width: 260px; height: 260px; display: flex; align-items: center; justify-content: center; }
