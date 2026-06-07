@@ -173,26 +173,22 @@ var SIT = (function() {
         t.classList.add('show');
         setTimeout(function() { t.classList.remove('show'); }, 3000);
     }
-
-function updateProUI() {
-    var db = document.getElementById('designerBtn');
-    if (db) db.style.display = hasAccess() ? 'inline-block' : 'none';
     
-    var lockBar = document.getElementById('studioLockBar');
-    if (lockBar) {
-        lockBar.style.display = hasAccess() ? 'none' : 'block';
-    }
-}
-    
-    if (typeof Academy !== 'undefined' && Academy.populateAcademy) Academy.populateAcademy();
-    if (typeof Beyond !== 'undefined' && Beyond.populateBeyond) Beyond.populateBeyond();
-}
-var topbarLogo = document.querySelector('.topbar-logo');
+    function updateProUI() {
+        var db = document.getElementById('designerBtn');
+        if (db) db.style.display = hasAccess() ? 'inline-block' : 'none';
+        
+        var lockBar = document.getElementById('studioLockBar');
+        if (lockBar) {
+            lockBar.style.display = hasAccess() ? 'none' : 'block';
+        }
+        
+        var topbarLogo = document.querySelector('.topbar-logo');
         if (topbarLogo) {
             if (state.proActive) {
                 topbarLogo.textContent = 'SĪT Studio 💎';
                 topbarLogo.style.color = 'var(--success)';
-            } else if (state.trialDays > 0) {
+            } else if (state.trialDays > 0 && state.loggedIn) {
                 topbarLogo.textContent = 'SĪT Studio ⏳';
                 topbarLogo.style.color = 'var(--accent)';
             } else {
@@ -200,6 +196,11 @@ var topbarLogo = document.querySelector('.topbar-logo');
                 topbarLogo.style.color = 'var(--accent)';
             }
         }
+        
+        if (typeof Academy !== 'undefined' && Academy.populateAcademy) Academy.populateAcademy();
+        if (typeof Beyond !== 'undefined' && Beyond.populateBeyond) Beyond.populateBeyond();
+    }   
+    
     // ===== SCORING =====
     function scorePour() {
         if (!hasAccess()) { showUpgrade(); return; }
