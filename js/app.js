@@ -202,7 +202,6 @@ var SIT = (function() {
                 topbarLogo.style.color = 'var(--accent)';
             }
         }
-    }
     // ===== SCORING =====
     function scorePour() {
         if (!hasAccess()) { showUpgrade(); return; }
