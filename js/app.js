@@ -180,12 +180,9 @@ function updateProUI() {
     
     var lockBar = document.getElementById('studioLockBar');
     if (lockBar) {
-        if (hasAccess()) {
-            lockBar.style.display = 'none';
-        } else {
-            lockBar.style.display = 'block';
-        }
+        lockBar.style.display = hasAccess() ? 'none' : 'block';
     }
+}
     
     var topbarLogo = document.querySelector('.topbar-logo');
     if (topbarLogo) {
