@@ -297,23 +297,45 @@ var SIT = (function() {
         var code = inp.value.trim().toUpperCase();
         if (!code) { err.textContent = 'Enter a code.'; err.style.display = 'block'; return; }
         
+        // Check if THIS user already used THIS code on THIS device
+        var localKey = 'sit_code_' + code;
+        var previousUser = localStorage.getItem(localKey);
+        var currentUser = state.userName || 'anonymous';
+        
+        if (previousUser && previousUser === currentUser) {
+            // Same user, same device — just re-activate
+            activatePro(code);
+            return;
+        }
+        
         err.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.6s linear infinite;margin-right:6px;vertical-align:middle;"></span> Validating...';
         err.style.color = 'var(--text-muted)';
         err.style.display = 'block';
 
-        var url = CONFIG.googleScriptURL + '?action=validate&code=' + encodeURIComponent(code) + '&user=' + encodeURIComponent(state.userName || 'anonymous');
+        var url = CONFIG.googleScriptURL + '?action=validate&code=' + encodeURIComponent(code) + '&user=' + encodeURIComponent(currentUser);
         fetch(url)
             .then(function(response) { return response.json(); })
             .then(function(data) {
-                if (data.valid) { activatePro(code); }
-                else { err.textContent = data.message || 'Invalid code.'; err.style.color = 'var(--error)'; err.innerHTML = err.textContent; }
+                if (data.valid) {
+                    localStorage.setItem(localKey, currentUser);
+                    activatePro(code);
+                } else { 
+                    err.textContent = data.message || 'Invalid code.'; 
+                    err.style.color = 'var(--error)'; 
+                    err.innerHTML = err.textContent; 
+                }
             })
             .catch(function() {
-                if (code.indexOf('SIT-PRO-') === 0 && code.length > 8) { activatePro(code); }
-                else { err.textContent = 'Cannot validate. WhatsApp ' + CONFIG.phone; err.style.color = 'var(--error)'; err.innerHTML = err.textContent; }
+                if (code.indexOf('SIT-PRO-') === 0 && code.length > 8) {
+                    localStorage.setItem(localKey, currentUser);
+                    activatePro(code);
+                } else { 
+                    err.textContent = 'Cannot validate. WhatsApp ' + CONFIG.phone; 
+                    err.style.color = 'var(--error)'; 
+                    err.innerHTML = err.textContent; 
+                }
             });
-    }
-    
+    }        
     function activatePro(code) {
         state.proActive = true;
         state.proCode = code;
