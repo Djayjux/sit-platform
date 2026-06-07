@@ -174,18 +174,20 @@ var SIT = (function() {
         setTimeout(function() { t.classList.remove('show'); }, 3000);
     }
 
-       function updateProUI() {
+    function updateProUI() {
         var db = document.getElementById('designerBtn');
         if (db) db.style.display = hasAccess() ? 'inline-block' : 'none';
-
-        var lock = document.getElementById('studioLock');
-        if (lock) {
-            if (hasAccess()) {
-                lock.style.setProperty('display', 'none', 'important');
-            } else {
-                lock.style.setProperty('display', 'flex', 'important');
-            }
-        }           
+        
+        var lockBar = document.getElementById('studioLockBar');
+        if (lockBar) lockBar.style.display = hasAccess() ? 'none' : 'block';
+        
+        var topbarLogo = document.querySelector('.topbar-logo');
+        if (topbarLogo) {
+            if (state.proActive) topbarLogo.textContent = 'SĪT Studio 💎';
+            else if (state.trialDays > 0) topbarLogo.textContent = 'SĪT Studio ⏳';
+            else topbarLogo.textContent = 'SĪT Studio';
+        }
+    }    
         // Pro badge in studio topbar
         var topbarLogo = document.querySelector('.topbar-logo');
         if (topbarLogo) {
