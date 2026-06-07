@@ -83,6 +83,10 @@
                     <button class="action-btn" onclick="Studio.scoreCanvas()">Score</button>
                     <button class="action-btn" onclick="Studio.downloadCanvas()">↓ Save</button>
                 </div>
+                  <div id="studioLockBar" style="display:none;width:100%;text-align:center;padding:6px;background:#FFF3CD;border-radius:8px;margin-bottom:4px;font-size:0.8rem;color:#856404;">
+        🔒 <strong>Studio locked.</strong> <a href="#" onclick="SIT.startTrial()" style="color:var(--accent);font-weight:700;">Start your free trial</a> to pour, score, and save.
+    </div>
+    <div class="topbar-logo">SĪT Studio</div>
             </header>
 
             <!-- LEFT PANEL -->
@@ -109,14 +113,7 @@
                 <div class="cup-wrapper" id="cupWrapper">
                     <div class="cup-saucer"></div>
                     <div class="canvas-area pouring" id="canvasArea">
-    <!-- Lock overlay for non-logged-in users -->
-    <div id="studioLock" style="position:absolute;inset:0;background:rgba(253,252,249,0.85);z-index:20;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;border-radius:50%;">
-        <div style="font-size:3rem;">🔒</div>
-        <p style="color:var(--espresso);font-weight:600;text-align:center;">Start your free trial to pour</p>
-        <button class="btn btn-primary" onclick="SIT.startTrial()">Start Free Trial</button>
-        <p style="font-size:0.75rem;color:var(--text-muted);">7 days free · No credit card</p>
-    </div>
-    
+ 
     <!-- rest of cup structure... -->                    
                     <!-- Tilt wrapper — rotates cup + handle together -->
                     <div class="cup-tilt-wrapper" id="cupTiltWrapper">
