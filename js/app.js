@@ -187,7 +187,6 @@ function updateProUI() {
     if (typeof Academy !== 'undefined' && Academy.populateAcademy) Academy.populateAcademy();
     if (typeof Beyond !== 'undefined' && Beyond.populateBeyond) Beyond.populateBeyond();
 }
-           }
 var topbarLogo = document.querySelector('.topbar-logo');
         if (topbarLogo) {
             if (state.proActive) {
