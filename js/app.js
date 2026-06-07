@@ -431,15 +431,32 @@ var SIT = (function() {
         document.getElementById('chapterContent').innerHTML = pages[page] || '<h1>Coming Soon</h1>';
         document.getElementById('chapterModal').classList.add('active');
     }
-
     return {
-        initApp: initApp, hasAccess: hasAccess, canFreestyle: canFreestyle, useFreestyleCredit: useFreestyleCredit,
-        startTrial: startTrial, showToast: showToast, scorePour: scorePour, closeScore: closeScore,
-        savePour: savePour, downloadArt: downloadArt, showUpgrade: showUpgrade, closeUpgrade: closeUpgrade,
-        redeemProCode: redeemProCode, doLogin: doLogin, doLogout: doLogout, openDashboard: openDashboard,
-        closeDashboard: closeDashboard, updateDashboardStats: updateDashboardStats, showDashTab: showDashTab,
-        saveSettings: saveSettings, showPage: showPage, getState: function() { return state; },
-        getConfig: function() { return CONFIG; }, updateProUI: updateProUI,
+        initApp: initApp,
+        hasAccess: hasAccess,
+        canFreestyle: canFreestyle,
+        useFreestyleCredit: useFreestyleCredit,
+        startTrial: startTrial,
+        startTrialLogin: startTrialLogin,
+        showToast: showToast,
+        scorePour: scorePour,
+        closeScore: closeScore,
+        savePour: savePour,
+        downloadArt: downloadArt,
+        showUpgrade: showUpgrade,
+        closeUpgrade: closeUpgrade,
+        redeemProCode: redeemProCode,
+        doLogin: doLogin,
+        doLogout: doLogout,
+        openDashboard: openDashboard,
+        closeDashboard: closeDashboard,
+        updateDashboardStats: updateDashboardStats,
+        showDashTab: showDashTab,
+        saveSettings: saveSettings,
+        showPage: showPage,
+        getState: function() { return state; },
+        getConfig: function() { return CONFIG; },
+        updateProUI: updateProUI,
     };
 })();
 
