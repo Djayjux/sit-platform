@@ -177,7 +177,12 @@ var SIT = (function() {
        function updateProUI() {
         var db = document.getElementById('designerBtn');
         if (db) db.style.display = hasAccess() ? 'inline-block' : 'none';
-        
+
+// Studio lock overlay
+        var lock = document.getElementById('studioLock');
+        if (lock) {
+            lock.style.display = hasAccess() ? 'none' : 'flex';
+        }           
         // Pro badge in studio topbar
         var topbarLogo = document.querySelector('.topbar-logo');
         if (topbarLogo) {
