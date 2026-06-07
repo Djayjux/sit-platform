@@ -110,10 +110,6 @@
             <main class="canvas-area pouring" id="canvasArea">
                 <div class="cup-wrapper" id="cupWrapper">
                     <div class="cup-saucer"></div>
-                    <div class="canvas-area pouring" id="canvasArea">
- 
-    <!-- rest of cup structure... -->                    
-                    <!-- Tilt wrapper — rotates cup + handle together -->
                     <div class="cup-tilt-wrapper" id="cupTiltWrapper">
                         <div class="cup-body">
                             <div class="cup-rim"></div>
@@ -132,21 +128,8 @@
                     <div class="score-value" id="scoreValue">—</div>
                     <div class="score-label">Pour Score</div>
                 </div>
-                    <div class="score-overlay" id="scoreOverlay" onclick="SIT.closeScore()">
-        <div class="score-card" onclick="event.stopPropagation()">
-            <h2>Pour Complete</h2>
-            <div class="score-emoji" id="scoreEmoji">☕</div>
-            <div class="score-big" id="scoreNumber">--</div>
-            <div class="score-detail" id="scoreDetail"></div>
-            <div class="score-tip" id="scoreTip"></div>
-            <div style="display:flex;gap:8px;justify-content:center;">
-                <button class="btn btn-outline" onclick="SIT.closeScore()">Close</button>
-                <button class="btn btn-primary" onclick="SIT.closeScore();Studio.clearCanvas();">Try Again</button>
-            </div>
-        </div>
-    </div>
-</main>    
-            
+            </main>            
+                        
             <!-- RIGHT PANEL -->
             <aside class="panel-right">
                 <div class="control-group">
@@ -197,6 +180,19 @@
         </div>
     </section>
 
+     <div class="score-overlay" id="scoreOverlay" onclick="SIT.closeScore()">
+        <div class="score-card" onclick="event.stopPropagation()">
+            <h2>Pour Complete</h2>
+            <div class="score-emoji" id="scoreEmoji">☕</div>
+            <div class="score-big" id="scoreNumber">--</div>
+            <div class="score-detail" id="scoreDetail"></div>
+            <div class="score-tip" id="scoreTip"></div>
+            <div style="display:flex;gap:8px;justify-content:center;">
+                <button class="btn btn-outline" onclick="SIT.closeScore()">Close</button>
+                <button class="btn btn-primary" onclick="SIT.closeScore();Studio.clearCanvas();">Try Again</button>
+            </div>
+        </div>
+    </div>
     <!-- ===== TESTIMONIALS ===== -->
     <section class="testimonial-section">
         <div class="section-header">
