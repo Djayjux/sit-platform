@@ -46,7 +46,7 @@ var SIT = (function() {
         localStorage.setItem('sit_trial', state.trialDays);
     }
 
-    function hasAccess() { return state.proActive || state.trialDays > 0; }
+    function hasAccess() { return state.proActive || state.trialDays > 0 && state.loggedIn; }
     function canFreestyle() { return hasAccess() || state.freestyleCount < 3; }
 
     function useFreestyleCredit() {
@@ -174,20 +174,30 @@ var SIT = (function() {
         setTimeout(function() { t.classList.remove('show'); }, 3000);
     }
 
-    function updateProUI() {
-        var db = document.getElementById('designerBtn');
-        if (db) db.style.display = hasAccess() ? 'inline-block' : 'none';
-        
-        var lockBar = document.getElementById('studioLockBar');
-        if (lockBar) lockBar.style.display = hasAccess() ? 'none' : 'block';
-        
-        var topbarLogo = document.querySelector('.topbar-logo');
-        if (topbarLogo) {
-            if (state.proActive) topbarLogo.textContent = 'SĪT Studio 💎';
-            else if (state.trialDays > 0) topbarLogo.textContent = 'SĪT Studio ⏳';
-            else topbarLogo.textContent = 'SĪT Studio';
+function updateProUI() {
+    var db = document.getElementById('designerBtn');
+    if (db) db.style.display = hasAccess() ? 'inline-block' : 'none';
+    
+    var lockBar = document.getElementById('studioLockBar');
+    if (lockBar) {
+        if (hasAccess()) {
+            lockBar.style.display = 'none';
+        } else {
+            lockBar.style.display = 'block';
         }
-    }    
+    }
+    
+    var topbarLogo = document.querySelector('.topbar-logo');
+    if (topbarLogo) {
+        if (state.proActive) topbarLogo.textContent = 'SĪT Studio 💎';
+        else if (state.trialDays > 0 && state.loggedIn) topbarLogo.textContent = 'SĪT Studio ⏳';
+        else topbarLogo.textContent = 'SĪT Studio';
+    }
+    
+    if (typeof Academy !== 'undefined' && Academy.populateAcademy) Academy.populateAcademy();
+    if (typeof Beyond !== 'undefined' && Beyond.populateBeyond) Beyond.populateBeyond();
+}
+}
         // Pro badge in studio topbar
         var topbarLogo = document.querySelector('.topbar-logo');
         if (topbarLogo) {
