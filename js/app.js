@@ -46,7 +46,7 @@ var SIT = (function() {
         localStorage.setItem('sit_trial', state.trialDays);
     }
 
-    function hasAccess() { return state.proActive || state.trialDays > 0 && state.loggedIn; }
+    function hasAccess() { return state.proActive || (state.trialDays > 0 && state.loggedIn === true); }
     function canFreestyle() { return hasAccess() || state.freestyleCount < 3; }
 
     function useFreestyleCredit() {
