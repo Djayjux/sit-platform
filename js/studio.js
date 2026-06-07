@@ -205,12 +205,25 @@ var Studio = (function() {
         return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
     }
 
-    function startPour(e) {
+        function startPour(e) {
         e.preventDefault();
+        
+        // BLOCK: Must be logged in or have trial
+        if (typeof SIT !== 'undefined' && !SIT.hasAccess()) {
+            SIT.showToast('🔒 Please start your free trial to pour.');
+            SIT.startTrial(); // Show login/trial screen
+            return;
+        }
+        
+        // Freestyle limit for free users
         if (currentMode === 'freestyle') {
-            if (typeof SIT !== 'undefined' && !SIT.canFreestyle()) { SIT.showUpgrade(); return; }
+            if (typeof SIT !== 'undefined' && !SIT.canFreestyle()) {
+                SIT.showUpgrade();
+                return;
+            }
             if (typeof SIT !== 'undefined') SIT.useFreestyleCredit();
         }
+        
         saveUndoSnapshot();
         isPouring = true;
         var pos = getPointerPos(e, milkCanvas);
@@ -220,7 +233,7 @@ var Studio = (function() {
         var r = getBrushRadius(), f = getFlow(), s = getSoftness();
         drawSoftStroke(milkCtx, lastX, lastY, r, f, s);
     }
-
+    
     function continuePour(e) {
         if (!isPouring) return;
         e.preventDefault();
@@ -332,6 +345,11 @@ var Studio = (function() {
 
     // ===== SCORE =====
     function scoreCanvas() {
+         if (typeof SIT !== 'undefined' && !SIT.hasAccess()) {
+            SIT.showToast('🔒 Start your free trial to score pours.');
+            SIT.startTrial();
+            return;
+        }
         if (strokeCount === 0) return;
         var tempCanvas = document.createElement('canvas');
         tempCanvas.width = W; tempCanvas.height = H;
@@ -401,6 +419,11 @@ var Studio = (function() {
 
     // ===== DOWNLOAD =====
     function downloadCanvas() {
+        if (typeof SIT !== 'undefined' && !SIT.hasAccess()) {
+            SIT.showToast('🔒 Start your free trial to download.');
+            SIT.startTrial();
+            return;
+        }
         if (!outCtx || !espressoCanvas || !milkCanvas) return;
         outCtx.clearRect(0, 0, W, H);
         outCtx.drawImage(espressoCanvas, 0, 0);
