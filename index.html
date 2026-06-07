@@ -71,24 +71,22 @@
 
         <div class="studio" id="studioApp">
             <!-- TOPBAR -->
-            <header class="topbar">
-                <div class="topbar-logo">SĪT Studio</div>
-                <div class="topbar-mode">
-                    <button class="mode-btn active" onclick="Studio.setMode('guided', this)">Guided</button>
-                    <button class="mode-btn" onclick="Studio.setMode('freestyle', this)">Freestyle</button>
-                </div>
-                <div class="topbar-actions">
-                    <button class="action-btn" onclick="Studio.undoStroke()">↩ Undo</button>
-                    <button class="action-btn" onclick="Studio.clearCanvas()">Clear</button>
-                    <button class="action-btn" onclick="Studio.scoreCanvas()">Score</button>
-                    <button class="action-btn" onclick="Studio.downloadCanvas()">↓ Save</button>
-                </div>
-                  <div id="studioLockBar" style="width:100%;text-align:center;padding:8px;background:#FFF3CD;border-radius:8px;margin-bottom:4px;font-size:0.8rem;color:#856404;">
-    🔒 <strong>Studio locked.</strong> <a href="#" onclick="SIT.startTrial()" style="color:var(--accent);font-weight:700;">Start your free trial</a> to pour.
-</div>   
-                <div class="topbar-logo">SĪT Studio</div>
-            </header>
-
+          <header class="topbar">
+    <div class="topbar-logo">SĪT Studio</div>
+    <div class="topbar-mode">
+        <button class="mode-btn active" onclick="Studio.setMode('guided', this)">Guided</button>
+        <button class="mode-btn" onclick="Studio.setMode('freestyle', this)">Freestyle</button>
+    </div>
+    <div class="topbar-actions">
+        <button class="action-btn" onclick="Studio.undoStroke()">↩ Undo</button>
+        <button class="action-btn" onclick="Studio.clearCanvas()">Clear</button>
+        <button class="action-btn" onclick="Studio.scoreCanvas()">Score</button>
+        <button class="action-btn" onclick="Studio.downloadCanvas()">↓ Save</button>
+    </div>
+    <div id="studioLockBar" style="display:block;width:100%;text-align:center;padding:6px;background:#FFF3CD;border-radius:8px;font-size:0.8rem;color:#856404;">
+        🔒 <strong>Studio locked.</strong> <a href="#" onclick="SIT.startTrial()" style="color:var(--accent);font-weight:700;">Start your free trial</a> to pour.
+    </div>
+</header>
             <!-- LEFT PANEL -->
             <aside class="panel-left">
                 <div>
