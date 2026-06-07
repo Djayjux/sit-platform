@@ -184,13 +184,6 @@ function updateProUI() {
     }
 }
     
-    var topbarLogo = document.querySelector('.topbar-logo');
-    if (topbarLogo) {
-        if (state.proActive) topbarLogo.textContent = 'SĪT Studio 💎';
-        else if (state.trialDays > 0 && state.loggedIn) topbarLogo.textContent = 'SĪT Studio ⏳';
-        else topbarLogo.textContent = 'SĪT Studio';
-    }
-    
     if (typeof Academy !== 'undefined' && Academy.populateAcademy) Academy.populateAcademy();
     if (typeof Beyond !== 'undefined' && Beyond.populateBeyond) Beyond.populateBeyond();
 }
