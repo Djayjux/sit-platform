@@ -194,7 +194,6 @@ function updateProUI() {
     if (typeof Academy !== 'undefined' && Academy.populateAcademy) Academy.populateAcademy();
     if (typeof Beyond !== 'undefined' && Beyond.populateBeyond) Beyond.populateBeyond();
 }
-    
         // Pro badge in studio topbar
         var topbarLogo = document.querySelector('.topbar-logo');
         if (topbarLogo) {
