@@ -178,10 +178,13 @@ var SIT = (function() {
         var db = document.getElementById('designerBtn');
         if (db) db.style.display = hasAccess() ? 'inline-block' : 'none';
 
-// Studio lock overlay
         var lock = document.getElementById('studioLock');
         if (lock) {
-            lock.style.display = hasAccess() ? 'none' : 'flex';
+            if (hasAccess()) {
+                lock.style.setProperty('display', 'none', 'important');
+            } else {
+                lock.style.setProperty('display', 'flex', 'important');
+            }
         }           
         // Pro badge in studio topbar
         var topbarLogo = document.querySelector('.topbar-logo');
